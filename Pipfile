@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+numpy = "*"
+matplotlib = "*"
+torch = "*"
+torchtext = "*"
+fugashi = {extras = ["unidic-lite"], version = "*"}
+
+[dev-packages]
+ipykernel = "*"
+black = "*"
+
+[requires]
+python_version = "3.9"
