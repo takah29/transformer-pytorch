@@ -8,7 +8,7 @@ numpy = "*"
 matplotlib = "*"
 torch = "*"
 torchtext = "*"
-fugashi = {extras = ["unidic-lite"], version = "*"}
+janome = "*"
 
 [dev-packages]
 ipykernel = "*"
