@@ -1,14 +1,17 @@
 from pathlib import Path
 import numpy as np
 import torch
-from torch import nn
+from torch import layer_norm, nn
 from torch.nn import functional as F
 
 n_batch = 2
 token_size = 256
-n_dim = 768
+input_dim = 768
 
-x = torch.rand(n_batch, token_size, n_dim)
+vocab_size = 1000
+
+x = torch.rand(n_batch, token_size, input_dim)
+
 
 # %%
 class Attention(nn.Module):
@@ -29,10 +32,19 @@ class Attention(nn.Module):
         return y
 
 
+class MultiheadAttention(nn.Module):
+    def __init__(self, ndim, hidden_dim, num):
+        super().__init__()
+
+    def forward(self):
+        pass
+
+
 # %%
-attention = Attention(n_dim, 200)
+attention = Attention(input_dim, 200)
 y = attention.forward(x)
 print(y.shape)
+
 
 # %%
 class FeedForwardNetwork(nn.Module):
@@ -49,24 +61,25 @@ class FeedForwardNetwork(nn.Module):
         return self.activate(x)
 
 
-ffn = FeedForwardNetwork(n_dim, 200)
+ffn = FeedForwardNetwork(input_dim, 200)
 y = ffn.forward(x)
 print(y.shape)
 
 
 class PositionalEncoder(nn.Module):
-    def __init__(self, n_dim):
-        self.n_dim = n_dim
+    def __init__(self, input_dim):
+        super().__init__()
+        self.input_dim = input_dim
 
     def eval_pe(self, x):
-        _, token_size, self.n_dim = x.shape
+        _, token_size, self.input_dim = x.shape
         result = []
         pos_v = torch.arange(token_size)
-        for i in range(self.n_dim):
+        for i in range(self.input_dim):
             if i % 2 == 0:
-                v = torch.sin(pos_v / 10000 ** (i / self.n_dim))
+                v = torch.sin(pos_v / 10000 ** (i / self.input_dim))
             elif i % 2 == 1:
-                v = torch.cos(pos_v / 10000 ** (i / self.n_dim))
+                v = torch.cos(pos_v / 10000 ** (i / self.input_dim))
             result.append(v)
 
         # print(torch.vstack(result).transpose(1, 0)[0])
@@ -78,13 +91,49 @@ class PositionalEncoder(nn.Module):
         return x + self.eval_pe(x)
 
 
-pe = PositionalEncoder(n_dim)
-y = pe.forward(torch.zeros(2, token_size, n_dim))
-print(y[0][1, 0], y[1][1, 0])
-
 # %%
 class TrasformerEncoder(nn.Module):
-    def init(self, input_dim, output_dim):
-        self.embedding = "dummy"
-        self.skdfhfsjhdfkh
-        self.asdakpdkpaksp
+    def __init__(self, input_dim, hidden_dim):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, input_dim, 0)
+        self.pe = PositionalEncoder(input_dim)
+        self.attention = Attention(input_dim, hidden_dim)
+        self.feedforward = FeedForwardNetwork(input_dim, hidden_dim)
+        self.norm1 = nn.LayerNorm((token_size, input_dim))
+        self.norm2 = nn.LayerNorm((token_size, input_dim))
+
+    def forward(self, x):
+        y = self.embedding(x)
+        y = self.pe.forward(y)
+        y = y + self.attention.forward(y)
+        y = self.norm1(y)
+        y = y + self.feedforward.forward(y)
+        y = self.norm2(y)
+        return y
+
+
+class Test:
+    # 分類用のネットワーク
+    def __init__(self, input_dim, hidden_dim):
+        super().__init__()
+        self.enc = TrasformerEncoder(input_dim, hidden_dim)
+        self.linear = nn.Linear(input_dim, 2)
+
+    def forward(self, x):
+        y = self.enc.forward(x)
+        y = self.linear(x)
+        return y
+
+
+def main():
+    pe = PositionalEncoder(input_dim)
+    result = pe.forward(torch.rand((n_batch, token_size, input_dim)))
+    print(result.size())
+
+    enc = TrasformerEncoder(input_dim, 256)
+    result = enc.forward(torch.randint(0, vocab_size, (n_batch, token_size)))
+    print(result)
+
+
+if __name__ == "__main__":
+    main()
