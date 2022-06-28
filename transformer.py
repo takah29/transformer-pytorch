@@ -22,7 +22,7 @@ class Attention(nn.Module):
         self.v_linear = nn.Linear(n_dim, hidden_dim)
         self.out_linear = nn.Linear(hidden_dim, n_dim)
 
-    def forward(self, x):
+    def __call__(self, x):
         q = self.q_linear(x)
         k = self.k_linear(x)
         v = self.v_linear(x)
@@ -36,13 +36,13 @@ class MultiheadAttention(nn.Module):
     def __init__(self, ndim, hidden_dim, num):
         super().__init__()
 
-    def forward(self):
+    def __call__(self):
         pass
 
 
 # %%
 attention = Attention(input_dim, 200)
-y = attention.forward(x)
+y = attention(x)
 print(y.shape)
 
 
@@ -55,14 +55,14 @@ class FeedForwardNetwork(nn.Module):
         self.linear2 = nn.Linear(hidden_dim, input_dim)
         self.activate = nn.GELU()
 
-    def forward(self, x):
+    def __call__(self, x):
         x = self.linear1(x)
         x = self.linear2(x)
         return self.activate(x)
 
 
 ffn = FeedForwardNetwork(input_dim, 200)
-y = ffn.forward(x)
+y = ffn(x)
 print(y.shape)
 
 
@@ -87,12 +87,12 @@ class PositionalEncoder(nn.Module):
 
         return torch.vstack(result).transpose(1, 0)
 
-    def forward(self, x):
+    def __call__(self, x):
         return x + self.eval_pe(x)
 
 
 # %%
-class TrasformerEncoder(nn.Module):
+class TransformerEncoder(nn.Module):
     def __init__(self, input_dim, hidden_dim):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, input_dim, 0)
@@ -102,12 +102,12 @@ class TrasformerEncoder(nn.Module):
         self.norm1 = nn.LayerNorm((token_size, input_dim))
         self.norm2 = nn.LayerNorm((token_size, input_dim))
 
-    def forward(self, x):
+    def __call__(self, x):
         y = self.embedding(x)
-        y = self.pe.forward(y)
-        y = y + self.attention.forward(y)
+        y = self.pe(y)
+        y = y + self.attention(y)
         y = self.norm1(y)
-        y = y + self.feedforward.forward(y)
+        y = y + self.feedforward(y)
         y = self.norm2(y)
         return y
 
@@ -119,7 +119,7 @@ class Test:
         self.enc = TrasformerEncoder(input_dim, hidden_dim)
         self.linear = nn.Linear(input_dim, 2)
 
-    def forward(self, x):
+    def __call__(self, x):
         y = self.enc.forward(x)
         y = self.linear(x)
         return y
