@@ -38,35 +38,46 @@ from transformer import TransformerEncoder
 
 def train(model, optimizer, train_x, train_t):
     criterion = nn.CrossEntropyLoss()
-    data_loader = DataLoader(list(zip(train_x, train_t)))
+    # dataset = torch.utils.data.TensorDataset(train_x, train_t)
+    data_loader = DataLoader(list(zip(train_x, train_t)), batch_size=10, shuffle=True)
 
-    for x, t in data_loader:
+    loss_list = []
+    for i, (x, t) in enumerate(data_loader):
+        print(i+1, x.size(), t.size())
         y = model(x)
+        # print(f"batch: {i+1}", x.size(), y, t)
         loss = criterion(y, t)
-        print(loss)
-
+        loss_list.append(loss)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
 
 
-def main():
-    x1 = torch.randint(0, 100, (100, 10))
-    print(x1)
-    t1 = torch.ones(10).to(torch.int32)
-    x2 = torch.randint(1000, 2000, (100, 10))
-    t2 = 2 * torch.ones(10).to(torch.int32)
 
-    X = np.vstack((x1, x2))
-    T = np.hstack((t1, t2))
+
+def main():
+    N = 1000
+    x1 = torch.randint(0, 500, (N, 256))
+    t1 = torch.zeros(N).to(torch.int64)
+    x2 = torch.randint(500, 1000, (N, 256))
+    t2 = torch.ones(N).to(torch.int64)
+
+    X = torch.vstack((x1, x2))
+    T = torch.hstack((t1, t2))
 
     x = torch.tensor(-75.0, requires_grad=True)
     y = torch.tensor(-10.0, requires_grad=True)
     params = [x, y]
 
     optimizer = optim.Adam(params)
-    model = TransformerEncoder(10, 5)
+    param = {
+        "vocab_size": 1000,
+        "n_dim": 100,
+        "hidden_dim": 16,
+        "token_size": 256
+    }
+    model = TransformerEncoder(**param)
 
     train(model, optimizer, X, T)
 

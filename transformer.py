@@ -4,13 +4,13 @@ import torch
 from torch import layer_norm, nn
 from torch.nn import functional as F
 
-n_batch = 2
-token_size = 256
-input_dim = 768
+# n_batch = 2
+# token_size = 100
+# input_dim = 768
 
-vocab_size = 1000
+# vocab_size = 1000
 
-x = torch.rand(n_batch, token_size, input_dim)
+# x = torch.rand(n_batch, token_size, input_dim)
 
 
 # %%
@@ -41,12 +41,6 @@ class MultiheadAttention(nn.Module):
 
 
 # %%
-attention = Attention(input_dim, 200)
-y = attention(x)
-print(y.shape)
-
-
-# %%
 class FeedForwardNetwork(nn.Module):
     def __init__(self, input_dim, hidden_dim):
         super().__init__()
@@ -61,9 +55,9 @@ class FeedForwardNetwork(nn.Module):
         return self.activate(x)
 
 
-ffn = FeedForwardNetwork(input_dim, 200)
-y = ffn(x)
-print(y.shape)
+# ffn = FeedForwardNetwork(input_dim, 200)
+# y = ffn(x)
+# print(y.shape)
 
 
 class PositionalEncoder(nn.Module):
@@ -93,22 +87,34 @@ class PositionalEncoder(nn.Module):
 
 # %%
 class TransformerEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim):
+    def __init__(self, vocab_size, n_dim, hidden_dim, token_size):
         super().__init__()
-        self.embedding = nn.Embedding(vocab_size, input_dim, 0)
-        self.pe = PositionalEncoder(input_dim)
-        self.attention = Attention(input_dim, hidden_dim)
-        self.feedforward = FeedForwardNetwork(input_dim, hidden_dim)
-        self.norm1 = nn.LayerNorm((token_size, input_dim))
-        self.norm2 = nn.LayerNorm((token_size, input_dim))
+        self.embedding = nn.Embedding(vocab_size, n_dim)
+        self.pe = PositionalEncoder(n_dim)
+        self.attention = Attention(n_dim, hidden_dim)
+        self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
+        self.norm1 = nn.LayerNorm((token_size, n_dim))
+        self.norm2 = nn.LayerNorm((token_size, n_dim))
+
+        # テスト用にクラス分類用の全結合層を定義する
+        self.linear = nn.Linear(n_dim, 2)
 
     def __call__(self, x):
         y = self.embedding(x)
+        # print(1, y.size())
         y = self.pe(y)
+        # print(2, y.size())
         y = y + self.attention(y)
+        # print(3, y.size())
         y = self.norm1(y)
+        # print(4, y.size())
         y = y + self.feedforward(y)
+        # print(5, y.size())
         y = self.norm2(y)
+        # print(6, y.size())
+        y = torch.mean(y, dim=1)
+        y = self.linear(y)
+
         return y
 
 
@@ -116,7 +122,7 @@ class Test:
     # 分類用のネットワーク
     def __init__(self, input_dim, hidden_dim):
         super().__init__()
-        self.enc = TrasformerEncoder(input_dim, hidden_dim)
+        self.enc = TransformerEncoder(input_dim, hidden_dim)
         self.linear = nn.Linear(input_dim, 2)
 
     def __call__(self, x):
@@ -130,7 +136,7 @@ def main():
     result = pe.forward(torch.rand((n_batch, token_size, input_dim)))
     print(result.size())
 
-    enc = TrasformerEncoder(input_dim, 256)
+    enc = TransformerEncoder(input_dim, 256)
     result = enc.forward(torch.randint(0, vocab_size, (n_batch, token_size)))
     print(result)
 
