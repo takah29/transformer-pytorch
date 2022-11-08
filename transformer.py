@@ -27,7 +27,7 @@ class ScaledDotProductAttention(nn.Module):
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, n_dim, head_num, mask=False):
+    def __init__(self, n_dim, head_num, masking=False):
         # 実装の簡易化のため次元をヘッド数で割り切れるかチェックする
         if n_dim % head_num != 0:
             raise ValueError("n_dim % head_num is not 0.")
@@ -36,7 +36,7 @@ class MultiheadAttention(nn.Module):
 
         self.n_dim = n_dim
         self.head_num = head_num
-        self.mask = mask
+        self.masking = masking
 
         self.head_dim = n_dim // head_num
         self.sqrt_head_dim = self.head_dim**0.5
@@ -75,7 +75,7 @@ class MultiheadAttention(nn.Module):
             dots = dots & src_mask
 
         # 後続情報にマスクを適用する
-        if self.mask:
+        if self.masking:
             dots = dots & MultiheadAttention._subsequent_mask(seq_size)
 
         attention = F.softmax(dots, dim=-1) @ v
@@ -142,8 +142,8 @@ class TransformerEncoderBlock(nn.Module):
         self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
         self.norm2 = nn.LayerNorm((token_size, n_dim))
 
-    def forward(self, x):
-        y = x + self.attention(x, x)
+    def forward(self, x, src_mask=None):
+        y = x + self.attention(x, x, src_mask)
         y = self.norm1(y)
         y = y + self.feedforward(y)
         y = self.norm2(y)
@@ -152,22 +152,22 @@ class TransformerEncoderBlock(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_blocks, head_num):
+    def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.pe = PositionalEncoder(n_dim)
         self.enc_blocks = [
             TransformerEncoderBlock(n_dim, hidden_dim, token_size, head_num)
-            for _ in range(n_blocks)
+            for _ in range(n_enc_blocks)
         ]
 
-    def forward(self, x):
+    def forward(self, x, src_mask=None):
         y = self.embedding(x)
         y = self.pe(y)
 
         for enc_block in self.enc_blocks:
-            y = enc_block(y)
+            y = enc_block(y, src_mask)
 
         return y
 
@@ -176,38 +176,71 @@ class TransformerDecoderBlock(nn.Module):
     def __init__(self, n_dim, hidden_dim, token_size, head_num):
         super().__init__()
 
-        self.attention = MultiheadAttention(n_dim, head_num)
+        self.masked_attention = MultiheadAttention(n_dim, head_num, masking=True)
         self.norm1 = nn.LayerNorm((token_size, n_dim))
-        self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
+        self.attention = MultiheadAttention(n_dim, head_num)
         self.norm2 = nn.LayerNorm((token_size, n_dim))
+        self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
+        self.norm3 = nn.LayerNorm((token_size, n_dim))
 
-    def forward(self, x, z):
-        y = x + self.attention(x, z)
+    def forward(self, x, z, src_mask=None):
+        y = x + self.masked_attention(x, x, src_mask)
         y = self.norm1(y)
-        y = y + self.feedforward(y)
+        y = y + self.attention(y, z, src_mask)
         y = self.norm2(y)
+        y = y + self.feedforward(y)
+        y = self.norm3(y)
 
         return y
 
 
 class TransformerClassifier(nn.Module):
-    # TransformerEncoderを使用した分類用ネットワーク
-    def __init__(self, n_classes, vocab_size, n_dim, hidden_dim, token_size, n_blocks, head_num):
+    """TransformerEncoderを使用した分類用ネットワーク"""
+
+    def __init__(
+        self, n_classes, vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
+    ):
         super().__init__()
 
         self.encoder = TransformerEncoder(
-            vocab_size, n_dim, hidden_dim, token_size, n_blocks, head_num
+            vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
         )
         self.linear = nn.Linear(n_dim, n_classes)
 
-    def forward(self, x):
-        y = self.encoder(x)
+    def forward(self, x, src_mask=None):
+        y = self.encoder(x, src_mask)
         y = torch.mean(y, dim=1)
         y = self.linear(y)
 
         return y
 
 
+class TransformerDecoder(nn.Module):
+    def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_dec_blocks, head_num):
+        super().__init__()
+
+        self.embedding = nn.Embedding(vocab_size, n_dim)
+        self.pe = PositionalEncoder(n_dim)
+        self.dec_blocks = [
+            TransformerDecoderBlock(n_dim, hidden_dim, token_size, head_num)
+            for _ in range(n_dec_blocks)
+        ]
+        self.out_linear = nn.Linear(n_dim, vocab_size)
+
+    def forward(self, x, z, src_mask=None):
+        y = self.embedding(x)
+        y = self.pe(y)
+
+        for dec_block in self.dec_blocks:
+            y = dec_block(y, z, src_mask)
+
+        y = self.out_linear(y)
+        y = F.softmax(y, dim=-1)
+        return y
+
+
 """
 * AttentionのMaskingの実装について: https://qiita.com/FuwaraMiyasaki/items/239f3528053889847825#attention%E3%81%AEmasking%E3%81%AE%E5%AE%9F%E8%A3%85%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6
+* 推論時のデータ方法について
+* 学習方法について
 """
