@@ -194,27 +194,6 @@ class TransformerDecoderBlock(nn.Module):
         return y
 
 
-class TransformerClassifier(nn.Module):
-    """TransformerEncoderを使用した分類用ネットワーク"""
-
-    def __init__(
-        self, n_classes, vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
-    ):
-        super().__init__()
-
-        self.encoder = TransformerEncoder(
-            vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
-        )
-        self.linear = nn.Linear(n_dim, n_classes)
-
-    def forward(self, x, src_mask=None):
-        y = self.encoder(x, src_mask)
-        y = torch.mean(y, dim=1)
-        y = self.linear(y)
-
-        return y
-
-
 class TransformerDecoder(nn.Module):
     def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_dec_blocks, head_num):
         super().__init__()
@@ -236,6 +215,54 @@ class TransformerDecoder(nn.Module):
 
         y = self.out_linear(y)
         y = F.softmax(y, dim=-1)
+        return y
+
+
+class TransformerClassifier(nn.Module):
+    """TransformerEncoderを使用した分類用ネットワーク"""
+
+    def __init__(
+        self, n_classes, vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
+    ):
+        super().__init__()
+
+        self.encoder = TransformerEncoder(
+            vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
+        )
+        self.linear = nn.Linear(n_dim, n_classes)
+
+    def forward(self, x, src_mask=None):
+        y = self.encoder(x, src_mask)
+        y = torch.mean(y, dim=1)
+        y = self.linear(y)
+
+        return y
+
+
+class Transformer(nn.Module):
+    def __init__(
+        self,
+        vocab_size,
+        n_dim,
+        hidden_dim,
+        token_size,
+        n_enc_blocks,
+        n_dec_blocks,
+        head_num,
+    ):
+        super().__init__()
+
+        self.encoder = TransformerEncoder(
+            vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
+        )
+        self.decoder = TransformerDecoder(
+            vocab_size, n_dim, hidden_dim, token_size, n_dec_blocks, head_num
+        )
+
+    def forward(self, x1, x2, src_mask1=None, src_mask2=None):
+        y = self.encoder(x1, src_mask1)
+        y = self.decoder(x2, y, src_mask2)
+
         return y
 
 
