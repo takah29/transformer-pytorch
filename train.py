@@ -97,6 +97,7 @@ def test():
         "n_dim": 100,
         "hidden_dim": 16,
         "token_size": token_size,
+        "head_num": 4,
     }
 
     model = TransformerClassifier(**param)

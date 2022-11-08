@@ -3,21 +3,25 @@ from torch import nn
 from torch.nn import functional as F
 
 
-class Attention(nn.Module):
-    def __init__(self, n_dim, hidden_dim):
+class ScaledDotProductAttention(nn.Module):
+    def __init__(self, n_dim):
         super().__init__()
 
-        self.q_linear = nn.Linear(n_dim, hidden_dim)
-        self.k_linear = nn.Linear(n_dim, hidden_dim)
-        self.v_linear = nn.Linear(n_dim, hidden_dim)
-        self.out_linear = nn.Linear(hidden_dim, n_dim)
+        self.n_dim = n_dim
+
+        self.q_linear = nn.Linear(n_dim, n_dim)
+        self.k_linear = nn.Linear(n_dim, n_dim)
+        self.v_linear = nn.Linear(n_dim, n_dim)
+        # self.out_linear = nn.Linear(n_dim, n_dim)  # hidden_dim = n_dimとすればこのリニア層は必要ない
 
     def forward(self, x):
         q = self.q_linear(x)
         k = self.k_linear(x)
         v = self.v_linear(x)
-        y = torch.matmul(F.softmax(torch.matmul(q, k.transpose(1, 2)), dim=2), v)
-        y = self.out_linear(y)
+        y = torch.matmul(
+            F.softmax(torch.matmul(q, k.transpose(1, 2) / self.n_dim**0.5), dim=2), v
+        )
+        # y = self.out_linear(y)
 
         return y
 
@@ -71,13 +75,13 @@ class FeedForwardNetwork(nn.Module):
 
         self.linear1 = nn.Linear(input_dim, hidden_dim)
         self.linear2 = nn.Linear(hidden_dim, input_dim)
-        self.activate = nn.GELU()
+        # self.activate = nn.GELU()
 
     def forward(self, x):
-        x = self.linear1(x)
-        x = self.linear2(x)
+        y = torch.relu(self.linear1(x))
+        y = self.linear2(y)
 
-        return self.activate(x)
+        return y
 
 
 class PositionalEncoder(nn.Module):
@@ -107,13 +111,14 @@ class PositionalEncoder(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_blocks):
+    def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_blocks, head_num):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.pe = PositionalEncoder(n_dim)
         self.enc_blocks = [
-            TransformerEncoderBlock(n_dim, hidden_dim, token_size) for _ in range(n_blocks)
+            TransformerEncoderBlock(n_dim, hidden_dim, token_size, head_num)
+            for _ in range(n_blocks)
         ]
 
     def forward(self, x):
@@ -127,12 +132,30 @@ class TransformerEncoder(nn.Module):
 
 
 class TransformerEncoderBlock(nn.Module):
-    def __init__(self, n_dim, hidden_dim, token_size):
+    def __init__(self, n_dim, hidden_dim, token_size, head_num):
         super().__init__()
 
-        self.attention = Attention(n_dim, hidden_dim)
-        self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
+        self.attention = MultiheadAttention(n_dim, head_num)
         self.norm1 = nn.LayerNorm((token_size, n_dim))
+        self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
+        self.norm2 = nn.LayerNorm((token_size, n_dim))
+
+    def forward(self, x):
+        y = x + self.attention(x)
+        y = self.norm1(y)
+        y = y + self.feedforward(y)
+        y = self.norm2(y)
+
+        return y
+
+
+class TransformerDecoderBlock(nn.Module):
+    def __init__(self, n_dim, hidden_dim, token_size, head_num):
+        super().__init__()
+
+        self.attention = MultiheadAttention(n_dim, head_num)
+        self.norm1 = nn.LayerNorm((token_size, n_dim))
+        self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
         self.norm2 = nn.LayerNorm((token_size, n_dim))
 
     def forward(self, x):
@@ -146,10 +169,12 @@ class TransformerEncoderBlock(nn.Module):
 
 class TransformerClassifier(nn.Module):
     # TransformerEncoderを使用した分類用ネットワーク
-    def __init__(self, n_classes, vocab_size, n_dim, hidden_dim, token_size, n_blocks):
+    def __init__(self, n_classes, vocab_size, n_dim, hidden_dim, token_size, n_blocks, head_num):
         super().__init__()
 
-        self.encoder = TransformerEncoder(vocab_size, n_dim, hidden_dim, token_size, n_blocks)
+        self.encoder = TransformerEncoder(
+            vocab_size, n_dim, hidden_dim, token_size, n_blocks, head_num
+        )
         self.linear = nn.Linear(n_dim, n_classes)
 
     def forward(self, x):
