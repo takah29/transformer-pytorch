@@ -1,10 +1,12 @@
 import torch
-from torch import  nn
+from torch import nn
 from torch.nn import functional as F
+
 
 class Attention(nn.Module):
     def __init__(self, n_dim, hidden_dim):
         super().__init__()
+
         self.q_linear = nn.Linear(n_dim, hidden_dim)
         self.k_linear = nn.Linear(n_dim, hidden_dim)
         self.v_linear = nn.Linear(n_dim, hidden_dim)
@@ -21,7 +23,7 @@ class Attention(nn.Module):
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, ndim, hidden_dim, num):
+    def __init__(self, n_dim, hidden_dim, num):
         super().__init__()
 
     def forward(self):
@@ -39,13 +41,14 @@ class FeedForwardNetwork(nn.Module):
     def forward(self, x):
         x = self.linear1(x)
         x = self.linear2(x)
-        return self.activate(x)
 
+        return self.activate(x)
 
 
 class PositionalEncoder(nn.Module):
     def __init__(self, input_dim):
         super().__init__()
+
         self.input_dim = input_dim
 
     def eval_pe(self, x):
@@ -71,26 +74,19 @@ class PositionalEncoder(nn.Module):
 class TransformerEncoder(nn.Module):
     def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_blocks):
         super().__init__()
+
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.pe = PositionalEncoder(n_dim)
-        self.blocks = [
+        self.enc_blocks = [
             TransformerEncoderBlock(n_dim, hidden_dim, token_size) for _ in range(n_blocks)
         ]
 
-        # テスト用にクラス分類用の全結合層を定義する
-        self.linear = nn.Linear(n_dim, 2)
-
     def forward(self, x):
         y = self.embedding(x)
-        # print(1, y.size())
         y = self.pe(y)
 
-        for block in self.blocks:
-            y = block(y)
-
-        # print(6, y.size())
-        y = torch.mean(y, dim=1)
-        y = self.linear(y)
+        for enc_block in self.enc_blocks:
+            y = enc_block(y)
 
         return y
 
@@ -98,32 +94,32 @@ class TransformerEncoder(nn.Module):
 class TransformerEncoderBlock(nn.Module):
     def __init__(self, n_dim, hidden_dim, token_size):
         super().__init__()
+
         self.attention = Attention(n_dim, hidden_dim)
         self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
         self.norm1 = nn.LayerNorm((token_size, n_dim))
         self.norm2 = nn.LayerNorm((token_size, n_dim))
 
     def forward(self, x):
-        # print(2, y.size())
         y = x + self.attention(x)
-        # print(3, y.size())
         y = self.norm1(y)
-        # print(4, y.size())
         y = y + self.feedforward(y)
-        # print(5, y.size())
         y = self.norm2(y)
 
         return y
 
 
-class Test:
-    # 分類用のネットワーク
-    def __init__(self, input_dim, hidden_dim):
+class TransformerClassifier(nn.Module):
+    # TransformerEncoderを使用した分類用ネットワーク
+    def __init__(self, n_classes, vocab_size, n_dim, hidden_dim, token_size, n_blocks):
         super().__init__()
-        self.enc = TransformerEncoder(input_dim, hidden_dim)
-        self.linear = nn.Linear(input_dim, 2)
+
+        self.encoder = TransformerEncoder(vocab_size, n_dim, hidden_dim, token_size, n_blocks)
+        self.linear = nn.Linear(n_dim, n_classes)
 
     def forward(self, x):
-        y = self.enc.forward(x)
-        y = self.linear(x)
+        y = self.encoder(x)
+        y = torch.mean(y, dim=1)
+        y = self.linear(y)
+
         return y

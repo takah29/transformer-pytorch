@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from torch import nn, optim
-from transformer import TransformerEncoder
+from transformer import TransformerClassifier
 from transformers import AutoTokenizer
 
 # class TestTrainer(pl.LightningModule):
@@ -65,18 +65,22 @@ def train(model, optimizer, train_x, train_t):
 
 
 def main():
-
-    N = 1000
-    vocab_size = 1000
     token_size = 256
-
     tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-whole-word-masking")
     token = tokenizer.encode_plus("お腹が痛いので遅れます。", padding="max_length", max_length=token_size)
     vocab_size = tokenizer.vocab_size
+
     print(vocab_size)
     print(token)
 
     exit()
+
+
+def test():
+
+    N = 1000
+    vocab_size = 1000
+    token_size = 256
 
     x1 = torch.randint(0, vocab_size // 2, (N, token_size))
     t1 = torch.zeros(N).to(torch.int64)
@@ -87,6 +91,7 @@ def main():
     T = torch.hstack((t1, t2))
 
     param = {
+        "n_classes": 2,
         "n_blocks": 3,
         "vocab_size": vocab_size,
         "n_dim": 100,
@@ -94,7 +99,7 @@ def main():
         "token_size": token_size,
     }
 
-    model = TransformerEncoder(**param)
+    model = TransformerClassifier(**param)
 
     optimizer = optim.Adam(model.parameters())
 
@@ -102,7 +107,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    test()
 
 """
 class BertForSequenceClassification_pl(pl.LightningModule):
