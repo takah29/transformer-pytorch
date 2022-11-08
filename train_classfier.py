@@ -36,14 +36,14 @@ from transformers import AutoTokenizer
 #         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
 
 
-def train(model, optimizer, train_x, train_t):
+def train(num_epoch, model, optimizer, train_x, train_t):
     criterion = nn.CrossEntropyLoss()
     # dataset = torch.utils.data.TensorDataset(train_x, train_t)
     data_loader = DataLoader(list(zip(train_x, train_t)), batch_size=100, shuffle=True)
 
     loss_list = []
     s = 0.0
-    for epoch in range(20):
+    for epoch in range(num_epoch):
         print("epoch: ", epoch)
         s = 0.0
         for i, (x, t) in enumerate(data_loader):
@@ -92,19 +92,20 @@ def test():
 
     param = {
         "n_classes": 2,
-        "n_blocks": 3,
+        "n_enc_blocks": 1,
         "vocab_size": vocab_size,
         "n_dim": 100,
         "hidden_dim": 16,
         "token_size": token_size,
-        "head_num": 4,
+        "head_num": 1,
     }
 
     model = TransformerClassifier(**param)
 
     optimizer = optim.Adam(model.parameters())
 
-    train(model, optimizer, X, T)
+    num_epoch = 10
+    train(num_epoch, model, optimizer, X, T)
 
 
 if __name__ == "__main__":
