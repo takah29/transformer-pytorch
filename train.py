@@ -1,10 +1,10 @@
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
 from torch import nn, optim
 from transformer import TransformerEncoder
-
+from transformers import AutoTokenizer
 
 # class TestTrainer(pl.LightningModule):
 #     def __init__(self, input_dim, hidden_dim, num_labels, lr):
@@ -39,45 +39,64 @@ from transformer import TransformerEncoder
 def train(model, optimizer, train_x, train_t):
     criterion = nn.CrossEntropyLoss()
     # dataset = torch.utils.data.TensorDataset(train_x, train_t)
-    data_loader = DataLoader(list(zip(train_x, train_t)), batch_size=10, shuffle=True)
+    data_loader = DataLoader(list(zip(train_x, train_t)), batch_size=100, shuffle=True)
 
     loss_list = []
-    for i, (x, t) in enumerate(data_loader):
-        print(i+1, x.size(), t.size())
-        y = model(x)
-        # print(f"batch: {i+1}", x.size(), y, t)
-        loss = criterion(y, t)
-        loss_list.append(loss)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    s = 0.0
+    for epoch in range(20):
+        print("epoch: ", epoch)
+        s = 0.0
+        for i, (x, t) in enumerate(data_loader):
+            # print(i + 1, x.size(), t.size())
+            y = model(x)
+            # print(f"batch: {i+1}", x.size(), y, t)
+            loss = criterion(y, t)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            s += loss.item()
+        loss_list.append(s)
+        print(s)
 
+    import matplotlib.pyplot as plt
 
-
+    plt.plot(loss_list)
+    plt.show()
 
 
 def main():
+
     N = 1000
-    x1 = torch.randint(0, 500, (N, 256))
+    vocab_size = 1000
+    token_size = 256
+
+    tokenizer = AutoTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-whole-word-masking")
+    token = tokenizer.encode_plus("お腹が痛いので遅れます。", padding="max_length", max_length=token_size)
+    vocab_size = tokenizer.vocab_size
+    print(vocab_size)
+    print(token)
+
+    exit()
+
+    x1 = torch.randint(0, vocab_size // 2, (N, token_size))
     t1 = torch.zeros(N).to(torch.int64)
-    x2 = torch.randint(500, 1000, (N, 256))
+    x2 = torch.randint(vocab_size // 2, vocab_size, (N, token_size))
     t2 = torch.ones(N).to(torch.int64)
 
     X = torch.vstack((x1, x2))
     T = torch.hstack((t1, t2))
 
-    x = torch.tensor(-75.0, requires_grad=True)
-    y = torch.tensor(-10.0, requires_grad=True)
-    params = [x, y]
-
-    optimizer = optim.Adam(params)
     param = {
-        "vocab_size": 1000,
+        "n_blocks": 3,
+        "vocab_size": vocab_size,
         "n_dim": 100,
         "hidden_dim": 16,
-        "token_size": 256
+        "token_size": token_size,
     }
+
     model = TransformerEncoder(**param)
+
+    optimizer = optim.Adam(model.parameters())
 
     train(model, optimizer, X, T)
 
