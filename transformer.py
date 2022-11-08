@@ -23,11 +23,46 @@ class Attention(nn.Module):
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, n_dim, hidden_dim, num):
+    def __init__(self, n_dim, head_num):
         super().__init__()
 
-    def forward(self):
-        pass
+        self.n_dim = n_dim
+        self.head_num = head_num
+        self.head_dim = n_dim // head_num
+        self.sqrt_head_dim = self.head_dim**0.5
+
+        self.q_linear = nn.Linear(n_dim, n_dim, bias=False)
+        self.k_linear = nn.Linear(n_dim, n_dim, bias=False)
+        self.v_linear = nn.Linear(n_dim, n_dim, bias=False)
+        self.out_linear = nn.Linear(n_dim, n_dim)
+
+    def forward(self, x):
+        batch_size, seq_size, _ = x.size()  # seq_sizeはtoken_sizeと同じ
+
+        # (batch, seq_size, n_dim) -> (batch, seq_size, n_dim)
+        q = self.q_linear(x)
+        k = self.k_linear(x)
+        v = self.v_linear(x)
+
+        # (batch, seq_size, n_dim) -> (batch, seq_size, head_num, head_dim)
+        q = q.view(batch_size, seq_size, self.head_num, self.head_dim)
+        k = k.view(batch_size, seq_size, self.head_num, self.head_dim)
+        v = v.view(batch_size, seq_size, self.head_num, self.head_dim)
+
+        # (batch, seq_size, head_num, head_dim) -> (batch, head_num, seq_size, head_dim)
+        q = q.transpose(1, 2)
+        k = k.transpose(1, 2)
+        v = v.transpose(1, 2)
+
+        # (batch, head_num, head_dim, seq_size)
+        k_transpose = k.transpose(2, 3)
+
+        attention = F.softmax((q @ k_transpose) / self.sqrt_head_dim, dim=-1) @ v
+
+        y = attention.transpose(1, 2).reshape(batch_size, seq_size, self.n_dim)
+        y = self.out_linear(y)
+
+        return y
 
 
 class FeedForwardNetwork(nn.Module):
