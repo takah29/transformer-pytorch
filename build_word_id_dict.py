@@ -3,17 +3,17 @@ from shutil import unpack_archive
 from urllib.request import urlretrieve
 from collections import Counter, OrderedDict
 import json
+import itertools
 
 from torchtext.vocab import vocab
 
+from dataset import get_tokenized_text_list
+
 
 def create_vocab(file_path: Path) -> dict:
-    word_list = []
-    with file_path.open("r") as f:
-        for line in f:
-            word_list.extend(line.strip().split())
+    tokenized_text_list = get_tokenized_text_list(file_path)
+    counter = Counter(list(itertools.chain.from_iterable(tokenized_text_list)))
 
-    counter = Counter(word_list)
     return vocab(
         OrderedDict(sorted(counter.items(), key=lambda x: x[1], reverse=True)),
         specials=["<pad>", "<unk>", "<bos>", "<eos>"],
