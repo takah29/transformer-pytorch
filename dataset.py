@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+from collections import OrderedDict
 
 from torch.utils.data import Dataset
 import torchtext.transforms as T
@@ -15,11 +16,14 @@ def get_tokenized_text_list(file_path):
     return tokenized_text_list
 
 
-def get_vocab(word_id_dict_path):
-    with open(word_id_dict_path, "r") as f:
-        en_word_id_dict = json.load(f)
+def get_vocab(word_freqs_file_path):
+    with open(word_freqs_file_path, "r") as f:
+        word_freqs_dict = json.load(f, object_pairs_hook=OrderedDict)
 
-    return vocab(en_word_id_dict)
+    voc = vocab(word_freqs_dict, specials=(["<pad>", "<unk>", "<bos>", "<eos>"]))
+    voc.set_default_index(voc["<unk>"])
+
+    return voc
 
 
 def get_transform(word_count, vocab_data):
@@ -67,17 +71,16 @@ class TextPairDataset(Dataset):
         return self.n_data
 
     @staticmethod
-    def create(en_txt_file_path, ja_txt_file_path, en_word_id_dict_path, ja_word_id_dict_path):
+    def create(en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path):
         # 文章をトークン化してリスト化したデータを作成
         en_tokenized_text_list = get_tokenized_text_list(en_txt_file_path)
         ja_tokenized_text_list = get_tokenized_text_list(ja_txt_file_path)
 
         # 1文あたりの単語数
-        word_count = 64
-        en_vocab = get_vocab(en_word_id_dict_path)
-        en_vocab.set_default_index(en_vocab["<unk>"])
-        ja_vocab = get_vocab(ja_word_id_dict_path)
-        ja_vocab.set_default_index(ja_vocab["<unk>"])
+        word_count = 32
+
+        en_vocab = get_vocab(en_word_freqs_path)
+        ja_vocab = get_vocab(ja_word_freqs_path)
 
         en_text_transform = get_transform(word_count, en_vocab)
         ja_text_transform = get_transform(word_count, ja_vocab)
@@ -91,10 +94,10 @@ if __name__ == "__main__":
     # 事前にbuild_word_id_dict.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
     en_txt_file_path = Path("dataset/small_parallel_enja-master/dev.en").resolve()
     ja_txt_file_path = Path("dataset/small_parallel_enja-master/dev.ja").resolve()
-    en_word_id_dict_path = Path("word_id_dict_en.json").resolve()
-    ja_word_id_dict_path = Path("word_id_dict_ja.json").resolve()
+    en_word_freqs_path = Path("word_freqs_en.json").resolve()
+    ja_word_freqs_path = Path("word_freqs_ja.json").resolve()
 
     text_pair_dataset = TextPairDataset.create(
-        en_txt_file_path, ja_txt_file_path, en_word_id_dict_path, ja_word_id_dict_path
+        en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
     )
     print(*list(text_pair_dataset)[:10], sep="\n")
