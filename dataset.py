@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 from collections import OrderedDict
 
+import torch
 from torch.utils.data import Dataset
 import torchtext.transforms as T
 from torchtext.vocab import vocab
@@ -26,49 +27,70 @@ def get_vocab(word_freqs_file_path):
     return voc
 
 
-def get_transform(word_count, vocab_data):
-    text_transform = T.Sequential(
-        T.VocabTransform(vocab_data),  # トークンに変換
-        T.Truncate(word_count),  # word_countを超過したデータを切り捨てる
-        T.AddToken(token=vocab_data["<bos>"], begin=True),  # 先頭に'<bos>追加
-        T.AddToken(token=vocab_data["<eos>"], begin=False),  # 終端に'<eos>'追加
-        T.ToTensor(),  # テンソルに変換
-        T.PadTransform(word_count + 2, vocab_data["<pad>"]),  # word_countに満たない文章を'<pad>'で埋める
-    )
-
-    return text_transform
-
-
 class TextPairDataset(Dataset):
-    def __init__(
-        self, tokenized_text_list_1, tokenized_text_list_2, text_transform_1, text_transform_2
-    ):
+    def __init__(self, tokenized_text_list_1, tokenized_text_list_2, vocab_1, vocab_2, word_count):
         super().__init__()
 
-        self.tokenized_text_list_1 = tokenized_text_list_1
-        self.tokenized_text_list_2 = tokenized_text_list_2
+        self._tokenized_text_list_1 = tokenized_text_list_1
+        self._tokenized_text_list_2 = tokenized_text_list_2
 
-        self.text_transform_1 = text_transform_1
-        self.text_transform_2 = text_transform_2
+        self._vocab_1 = vocab_1
+        self._vocab_2 = vocab_2
+
+        self._word_count = word_count
+
+        self._text_transform_1 = TextPairDataset._get_transform(word_count, vocab_1)
+        self._text_transform_2 = TextPairDataset._get_transform(word_count, vocab_2)
 
         # 2つのtextリストのうち要素数が少ない方のリストに合わせる。超過した要素は無視する
-        self.n_data = min(len(self.tokenized_text_list_1), len(self.tokenized_text_list_2))
+        self._n_data = min(len(self._tokenized_text_list_1), len(self._tokenized_text_list_2))
+
+        self._pad_word_id_1 = vocab_1["<pad>"]
+        self._pad_word_id_2 = vocab_2["<pad>"]
 
     def __getitem__(self, i):
-        enc_input = self.tokenized_text_list_1[i]
-        enc_input = self.text_transform_1([enc_input]).squeeze()
+        enc_input = self._tokenized_text_list_1[i]
+        enc_input = self._text_transform_1([enc_input]).squeeze()
 
-        target = self.tokenized_text_list_2[i]
-        target = self.text_transform_2([target]).squeeze()
+        target = self._tokenized_text_list_2[i]
+        target = self._text_transform_2([target]).squeeze()
 
         dec_input = target[:-1]
         dec_target = target[1:]  # 右に1つずらす
-        data = {"enc_input": enc_input, "dec_input": dec_input, "dec_target": dec_target}
+
+        data = {
+            "enc_input": {
+                "text": enc_input,
+                "mask": self._get_padding_mask(enc_input, self._pad_word_id_1),
+            },
+            "dec_input": {
+                "text": dec_input,
+                "mask": self._get_padding_mask(dec_input, self._pad_word_id_2),
+            },
+            "dec_target": dec_target,
+        }
 
         return data
 
     def __len__(self):
-        return self.n_data
+        return self._n_data
+
+    @staticmethod
+    def _get_padding_mask(x, pad_id):
+        return (x != pad_id).to(torch.uint8)  # (token_size, )
+
+    @staticmethod
+    def _get_transform(word_count, vocab_data):
+        text_transform = T.Sequential(
+            T.VocabTransform(vocab_data),  # トークンに変換
+            T.Truncate(word_count),  # word_countを超過したデータを切り捨てる
+            T.AddToken(token=vocab_data["<bos>"], begin=True),  # 先頭に'<bos>追加
+            T.AddToken(token=vocab_data["<eos>"], begin=False),  # 終端に'<eos>'追加
+            T.ToTensor(),  # テンソルに変換
+            T.PadTransform(word_count + 2, vocab_data["<pad>"]),  # word_countに満たない文章を'<pad>'で埋める
+        )
+
+        return text_transform
 
     @staticmethod
     def create(en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path):
@@ -82,11 +104,8 @@ class TextPairDataset(Dataset):
         en_vocab = get_vocab(en_word_freqs_path)
         ja_vocab = get_vocab(ja_word_freqs_path)
 
-        en_text_transform = get_transform(word_count, en_vocab)
-        ja_text_transform = get_transform(word_count, ja_vocab)
-
         return TextPairDataset(
-            en_tokenized_text_list, ja_tokenized_text_list, en_text_transform, ja_text_transform
+            en_tokenized_text_list, ja_tokenized_text_list, en_vocab, ja_vocab, word_count
         )
 
 
