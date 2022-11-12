@@ -131,10 +131,10 @@ class PositionalEncoder(nn.Module):
 
         self.input_dim = input_dim
 
-    def eval_pe(self, x):
-        _, token_size, self.input_dim = x.shape
+    def _calc_pe(self, token_size):
         result = []
         pos_v = torch.arange(token_size)
+
         for i in range(self.input_dim):
             if i % 2 == 0:
                 v = torch.sin(pos_v / 10000 ** (i / self.input_dim))
@@ -145,7 +145,8 @@ class PositionalEncoder(nn.Module):
         return torch.vstack(result).transpose(1, 0)
 
     def forward(self, x):
-        return x + self.eval_pe(x)
+        _, token_size, _ = x.shape
+        return x + self._calc_pe(token_size)
 
 
 class TransformerEncoderBlock(nn.Module):
@@ -171,7 +172,7 @@ class TransformerEncoder(nn.Module):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
-        self.pe = PositionalEncoder(n_dim)
+        self.positional_encoder = PositionalEncoder(n_dim)
         self.enc_blocks = [
             TransformerEncoderBlock(n_dim, hidden_dim, token_size, head_num)
             for _ in range(n_enc_blocks)
@@ -179,7 +180,7 @@ class TransformerEncoder(nn.Module):
 
     def forward(self, x, src_mask=None):
         y = self.embedding(x)
-        y = self.pe(y)
+        y = self.positional_encoder(y)
 
         for enc_block in self.enc_blocks:
             y = enc_block(y, src_mask)
@@ -287,7 +288,7 @@ if __name__ == "__main__":
     from dataset import TextPairDataset
     from torch.utils.data import DataLoader
 
-    # 事前にbuild_word_id_dict.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
+    # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
     en_txt_file_path = Path("dataset/small_parallel_enja-master/dev.en").resolve()
     ja_txt_file_path = Path("dataset/small_parallel_enja-master/dev.ja").resolve()
     en_word_freqs_path = Path("word_freqs_en.json").resolve()
