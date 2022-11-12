@@ -75,6 +75,9 @@ class TextPairDataset(Dataset):
     def __len__(self):
         return self._n_data
 
+    def get_vocab_size(self):
+        return len(self._vocab_1), len(self._vocab_2)
+
     @staticmethod
     def _get_padding_mask(x, pad_id):
         return (x != pad_id).to(torch.uint8)  # (token_size, )
