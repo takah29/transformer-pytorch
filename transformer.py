@@ -46,53 +46,68 @@ class MultiheadAttention(nn.Module):
         self.v_linear = nn.Linear(n_dim, n_dim, bias=False)
         self.out_linear = nn.Linear(n_dim, n_dim)
 
-    def forward(self, s, t, src_mask=None):
-        batch_size, seq_size, _ = t.size()  # seq_sizeはtoken_sizeと同じ
+    def forward(self, x1, x2, x2_mask=None):
+        batch_size, x1_seq_size, _ = x1.size()  # seq_sizeはtoken_sizeと同じ
+        _, x2_seq_size, _ = x2.size()
 
         # リニア層をヘッドごとに用意する方法もあるが、リニア層を適用したあと分割する
         # (batch, seq_size, n_dim) -> (batch, seq_size, n_dim)
-        q = self.q_linear(s)
-        k = self.k_linear(t)
-        v = self.v_linear(t)
+        q = self.q_linear(x1)
+        k = self.k_linear(x2)
+        v = self.v_linear(x2)
 
         # (batch, seq_size, n_dim) -> (batch, seq_size, head_num, head_dim)
-        q = q.view(batch_size, seq_size, self.head_num, self.head_dim)
-        k = k.view(batch_size, seq_size, self.head_num, self.head_dim)
-        v = v.view(batch_size, seq_size, self.head_num, self.head_dim)
+        q = q.view(batch_size, x1_seq_size, self.head_num, self.head_dim)
+        k = k.view(batch_size, x2_seq_size, self.head_num, self.head_dim)
+        v = v.view(batch_size, x2_seq_size, self.head_num, self.head_dim)
 
         # (batch, seq_size, head_num, head_dim) -> (batch, head_num, seq_size, head_dim)
         q = q.transpose(1, 2)
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
 
-        # (batch, head_num, head_dim, seq_size)
+        # (batch, head_num, x2_seq_size, head_dim) -> (batch, head_num, head_dim, x2_seq_size)
         k_transpose = k.transpose(2, 3)
+
+        # (batch, head_num, x1_seq_size, head_dim) @ (batch, head_num, head_dim, x2_seq_size)
+        # -> (batch, head_num, x1_seq_size, x2_seq_size)
         dots = (q @ k_transpose) / self.sqrt_head_dim
 
-        # パディング部分などにマスクを適用する
-        if src_mask is not None:
-            src_mask = src_mask.unsqueeze(-2)
-            dots = dots & src_mask
+        # パディング部分にマスクを適用する
+        if x2_mask is not None:
+            # (batch, x2_seq_size) -> (batch, 1, 1, x2_seq_size)
+            x2_mask = x2_mask.unsqueeze(-2).unsqueeze(-2)
+
+            # (batch, head_num, x1_seq_size, x2_seq_size) * (batch, 1, 1, x2_seq_size)
+            # -> (batch, head_num, x1_seq_size, x2_seq_size)
+            dots = dots * x2_mask
 
         # 後続情報にマスクを適用する
         if self.masking:
-            dots = dots & MultiheadAttention._subsequent_mask(seq_size)
+            assert x1_seq_size == x2_seq_size  # self-attentionを仮定しているのでサイズが同じでないといけない
 
+            # (batch, head_num, x1_seq_size, x1_seq_size) * (1, x1_seq_size, x1_seq_size)
+            # -> (batch, head_num, x1_seq_size, x1_seq_size)
+            dots = dots * MultiheadAttention._subsequent_mask(x1_seq_size)
+
+        # (batch, head_num, x1_seq_size, x2_seq_size) @ (batch, head_num, x2_seq_size, head_dim)
+        # -> (batch, head_num, x1_seq_size, head_dim)
         attention = F.softmax(dots, dim=-1) @ v
-        y = attention.transpose(1, 2).reshape(batch_size, seq_size, self.n_dim)
+
+        # (batch, head_num, x1_seq_size, head_dim) -> (batch, x1_seq_size, n_dim)
+        y = attention.transpose(1, 2).reshape(batch_size, x1_seq_size, self.n_dim)
+
         y = self.out_linear(y)
 
         return y
 
     @staticmethod
     def _subsequent_mask(size):
-        attn_shape = (1, size, size)  # [1, tgt_len, tgt_len]
+        attention_shape = (1, size, size)
         # 三角行列の生成
-        subsequent_mask = torch.triu(torch.ones(attn_shape), k=1).astype(
-            "uint8"
-        )  # [1, tgt_len, tgt_len]
-        # 1と0を反転する処理
-        return subsequent_mask == 0
+        subsequent_mask = torch.triu(torch.ones(attention_shape), diagonal=1).to(torch.uint8)
+
+        return subsequent_mask == 0  # 1と0を反転
 
 
 class FeedForwardNetwork(nn.Module):
@@ -138,12 +153,12 @@ class TransformerEncoderBlock(nn.Module):
         super().__init__()
 
         self.attention = MultiheadAttention(n_dim, head_num)
-        self.norm1 = nn.LayerNorm((token_size, n_dim))
+        self.norm1 = nn.LayerNorm((n_dim))
         self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
-        self.norm2 = nn.LayerNorm((token_size, n_dim))
+        self.norm2 = nn.LayerNorm((n_dim))
 
-    def forward(self, x, src_mask=None):
-        y = x + self.attention(x, x, src_mask)
+    def forward(self, x, x_mask=None):
+        y = x + self.attention(x, x, x_mask)
         y = self.norm1(y)
         y = y + self.feedforward(y)
         y = self.norm2(y)
@@ -177,16 +192,16 @@ class TransformerDecoderBlock(nn.Module):
         super().__init__()
 
         self.masked_attention = MultiheadAttention(n_dim, head_num, masking=True)
-        self.norm1 = nn.LayerNorm((token_size, n_dim))
+        self.norm1 = nn.LayerNorm((n_dim))
         self.attention = MultiheadAttention(n_dim, head_num)
-        self.norm2 = nn.LayerNorm((token_size, n_dim))
+        self.norm2 = nn.LayerNorm((n_dim))
         self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
-        self.norm3 = nn.LayerNorm((token_size, n_dim))
+        self.norm3 = nn.LayerNorm((n_dim))
 
-    def forward(self, x, z, src_mask=None):
-        y = x + self.masked_attention(x, x, src_mask)
+    def forward(self, x, z, x_mask=None, z_mask=None):
+        y = x + self.masked_attention(x, x, x_mask)
         y = self.norm1(y)
-        y = y + self.attention(y, z, src_mask)
+        y = y + self.attention(y, z, z_mask)
         y = self.norm2(y)
         y = y + self.feedforward(y)
         y = self.norm3(y)
@@ -206,12 +221,12 @@ class TransformerDecoder(nn.Module):
         ]
         self.out_linear = nn.Linear(n_dim, vocab_size)
 
-    def forward(self, x, z, src_mask=None):
+    def forward(self, x, z, x_mask=None, z_mask=None):
         y = self.embedding(x)
         y = self.pe(y)
 
         for dec_block in self.dec_blocks:
-            y = dec_block(y, z, src_mask)
+            y = dec_block(y, z, x_mask, z_mask)
 
         y = self.out_linear(y)
         y = F.softmax(y, dim=-1)
@@ -231,8 +246,8 @@ class TransformerClassifier(nn.Module):
         )
         self.linear = nn.Linear(n_dim, n_classes)
 
-    def forward(self, x, src_mask=None):
-        y = self.encoder(x, src_mask)
+    def forward(self, x, mask=None):
+        y = self.encoder(x, mask)
         y = torch.mean(y, dim=1)
         y = self.linear(y)
 
@@ -242,7 +257,8 @@ class TransformerClassifier(nn.Module):
 class Transformer(nn.Module):
     def __init__(
         self,
-        vocab_size,
+        enc_vocab_size,
+        dec_vocab_size,
         n_dim,
         hidden_dim,
         token_size,
@@ -253,21 +269,55 @@ class Transformer(nn.Module):
         super().__init__()
 
         self.encoder = TransformerEncoder(
-            vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
+            enc_vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
         )
         self.decoder = TransformerDecoder(
-            vocab_size, n_dim, hidden_dim, token_size, n_dec_blocks, head_num
+            dec_vocab_size, n_dim, hidden_dim, token_size, n_dec_blocks, head_num
         )
 
-    def forward(self, x1, x2, src_mask1=None, src_mask2=None):
-        y = self.encoder(x1, src_mask1)
-        y = self.decoder(x2, y, src_mask2)
+    def forward(self, enc_x, dec_x, enc_mask, dec_mask):
+        y = self.encoder(enc_x, enc_mask)
+        y = self.decoder(dec_x, y, dec_mask, enc_mask)
 
         return y
 
 
-"""
-* AttentionのMaskingの実装について: https://qiita.com/FuwaraMiyasaki/items/239f3528053889847825#attention%E3%81%AEmasking%E3%81%AE%E5%AE%9F%E8%A3%85%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6
-* 推論時のデータ方法について
-* 学習方法について
-"""
+if __name__ == "__main__":
+    from pathlib import Path
+    from dataset import TextPairDataset
+    from torch.utils.data import DataLoader
+
+    # 事前にbuild_word_id_dict.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
+    en_txt_file_path = Path("dataset/small_parallel_enja-master/dev.en").resolve()
+    ja_txt_file_path = Path("dataset/small_parallel_enja-master/dev.ja").resolve()
+    en_word_freqs_path = Path("word_freqs_en.json").resolve()
+    ja_word_freqs_path = Path("word_freqs_ja.json").resolve()
+
+    text_pair_dataset = TextPairDataset.create(
+        en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
+    )
+    data_loader = DataLoader(list(text_pair_dataset)[:10], batch_size=2, shuffle=True)
+
+    enc_vocab_size, dec_vocab_size = text_pair_dataset.get_vocab_size()
+    params = {
+        "enc_vocab_size": enc_vocab_size,
+        "dec_vocab_size": dec_vocab_size,
+        "n_dim": 64,
+        "hidden_dim": 32,
+        "token_size": 40,
+        "n_enc_blocks": 3,
+        "n_dec_blocks": 2,
+        "head_num": 4,
+    }
+    transformer = Transformer(**params)
+
+    for i, batch in enumerate(data_loader):
+        print("iter:", i + 1)
+        print("input shape:", batch["enc_input"]["text"].size())
+        y = transformer(
+            batch["enc_input"]["text"],
+            batch["dec_input"]["text"],
+            batch["enc_input"]["mask"],
+            batch["dec_input"]["mask"],
+        )
+        print("output shape:", y.shape)
