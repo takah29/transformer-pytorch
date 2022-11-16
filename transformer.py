@@ -88,7 +88,7 @@ class MultiheadAttention(nn.Module):
 
             # (batch, head_num, x1_seq_size, x1_seq_size) * (1, x1_seq_size, x1_seq_size)
             # -> (batch, head_num, x1_seq_size, x1_seq_size)
-            dots = dots * MultiheadAttention._subsequent_mask(x1_seq_size)
+            dots = dots * MultiheadAttention._subsequent_mask(x1_seq_size).to(dots.device)
 
         # (batch, head_num, x1_seq_size, x2_seq_size) @ (batch, head_num, x2_seq_size, head_dim)
         # -> (batch, head_num, x1_seq_size, head_dim)
@@ -146,7 +146,7 @@ class PositionalEncoder(nn.Module):
 
     def forward(self, x):
         _, token_size, _ = x.shape
-        return x + self._calc_pe(token_size)
+        return x + self._calc_pe(token_size).to(x.device)
 
 
 class TransformerEncoderBlock(nn.Module):
@@ -173,10 +173,12 @@ class TransformerEncoder(nn.Module):
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.positional_encoder = PositionalEncoder(n_dim)
-        self.enc_blocks = [
-            TransformerEncoderBlock(n_dim, hidden_dim, token_size, head_num)
-            for _ in range(n_enc_blocks)
-        ]
+        self.enc_blocks = nn.ModuleList(
+            [
+                TransformerEncoderBlock(n_dim, hidden_dim, token_size, head_num)
+                for _ in range(n_enc_blocks)
+            ]
+        )
 
     def forward(self, x, src_mask=None):
         y = self.embedding(x)
@@ -216,10 +218,12 @@ class TransformerDecoder(nn.Module):
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.pe = PositionalEncoder(n_dim)
-        self.dec_blocks = [
-            TransformerDecoderBlock(n_dim, hidden_dim, token_size, head_num)
-            for _ in range(n_dec_blocks)
-        ]
+        self.dec_blocks = nn.ModuleList(
+            [
+                TransformerDecoderBlock(n_dim, hidden_dim, token_size, head_num)
+                for _ in range(n_dec_blocks)
+            ]
+        )
         self.out_linear = nn.Linear(n_dim, vocab_size)
 
     def forward(self, x, z, x_mask=None, z_mask=None):
