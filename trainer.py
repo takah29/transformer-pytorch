@@ -24,6 +24,8 @@ class TranslationModelTrainer:
 
         loss_list = []
         s = 0.0
+        self._model.train()
+
         for epoch in range(num_epoch):
             print("epoch: ", epoch)
             s = 0.0
@@ -88,8 +90,7 @@ if __name__ == "__main__":
     transformer = Transformer(**params)
 
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
-
     translation_model_trainer = TranslationModelTrainer(
-        transformer, optim.Adam, text_pair_dataset, device, 0.05
+        transformer, optim.Adam, text_pair_dataset, device, 0.5
     )
-    translation_model_trainer.fit(batch_size=100, num_epoch=10)
+    translation_model_trainer.fit(batch_size=1000, num_epoch=20)
