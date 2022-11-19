@@ -120,6 +120,7 @@ class TextClassificationDataset(Dataset):
 
         self._tokenized_text_list = labeled_tokenized_text["tokenized_text_list"]
         self._class_num_list = labeled_tokenized_text["class_label_list"]
+        self._class_name_list = labeled_tokenized_text["class_name_list"]
         self._vocab_data = vocab_data
         self._word_count = word_count
 
@@ -175,31 +176,35 @@ class TextClassificationDataset(Dataset):
         # 1文あたりの単語数
         word_count = 32
 
-        vocab_data = get_vocab(en_word_freqs_path)
+        vocab_data = get_vocab(word_freqs_path)
 
         return TextClassificationDataset(labeled_tokenized_text, vocab_data, word_count)
 
 
 if __name__ == "__main__":
-    # 事前にbuild_small_parallel_enja_word_freqs.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
-    print("text_pair_dataset test")
-    en_txt_file_path = Path("dataset/small_parallel_enja-master/dev.en").resolve()
-    ja_txt_file_path = Path("dataset/small_parallel_enja-master/dev.ja").resolve()
-    en_word_freqs_path = Path("word_freqs_en.json").resolve()
-    ja_word_freqs_path = Path("word_freqs_ja.json").resolve()
+    def test1():
+        # 事前にbuild_small_parallel_enja_word_freqs.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
+        print("text_pair_dataset test")
+        en_txt_file_path = Path("dataset/small_parallel_enja-master/dev.en").resolve()
+        ja_txt_file_path = Path("dataset/small_parallel_enja-master/dev.ja").resolve()
+        en_word_freqs_path = Path("word_freqs_en.json").resolve()
+        ja_word_freqs_path = Path("word_freqs_ja.json").resolve()
 
-    text_pair_dataset = TextPairDataset.create(
-        en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
-    )
-    print(*list(text_pair_dataset)[:10], sep="\n")
+        text_pair_dataset = TextPairDataset.create(
+            en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
+        )
+        print(*list(text_pair_dataset)[:10], sep="\n")
+    test1()
 
-    # 事前にbuild_ldcc_word_freqs.pyを実行してデータセットのダウンロードと
-    # データセットのpickleファイルと単語辞書の作成を行っておく
-    print("text_classification_dataset test")
-    labeled_tokenized_text_pkl_path = Path("ldcc_tokenized_text_list.pkl").resolve()
-    word_freqs_path = Path("ldcc_word_freqs.json").resolve()
+    def test2():
+        # 事前にbuild_ldcc_word_freqs.pyを実行してデータセットのダウンロードと
+        # データセットのpickleファイルと単語辞書の作成を行っておく
+        print("text_classification_dataset test")
+        labeled_tokenized_text_pkl_path = Path("ldcc_tokenized_text_list.pkl").resolve()
+        word_freqs_path = Path("ldcc_word_freqs.json").resolve()
 
-    text_classification_dataset = TextClassificationDataset.create(
-        labeled_tokenized_text_pkl_path, word_freqs_path
-    )
-    print(*list(text_classification_dataset)[:10], sep="\n")
+        text_classification_dataset = TextClassificationDataset.create(
+            labeled_tokenized_text_pkl_path, word_freqs_path
+        )
+        print(*list(text_classification_dataset)[:10], sep="\n")
+    test2()
