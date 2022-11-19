@@ -126,6 +126,7 @@ class TextClassificationDataset(Dataset):
 
         self._text_transform = TextPairDataset._get_transform(word_count, vocab_data)
         self._n_data = len(self._tokenized_text_list)
+        self._n_classes = len(self._class_num_list)
         self._pad_word_id = vocab_data["<pad>"]
 
     def __getitem__(self, i):
@@ -149,6 +150,9 @@ class TextClassificationDataset(Dataset):
 
     def get_vocab_size(self):
         return len(self._vocab_data)
+
+    def get_class_num(self):
+        return self._n_classes
 
     @staticmethod
     def _get_padding_mask(x, pad_id):
