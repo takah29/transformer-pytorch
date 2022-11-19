@@ -28,10 +28,12 @@ def main():
         urlretrieve(url, zip_path)
 
     # zipファイルを展開する
+    print(f"expand {file_name}")
     unpack_archive(zip_path, base_path / "dataset")
     dataset_path = base_path / "dataset" / "small_parallel_enja-master"
 
     # 単語ID辞書をjson形式で保存する
+    print("create word frequency file...")
     word_freqs_ja = create_word_freqs(dataset_path / "train.ja")
     with (base_path / "word_freqs_ja.json").open("w") as f:
         json.dump(word_freqs_ja, f, indent=2, ensure_ascii=False)
@@ -39,6 +41,8 @@ def main():
     word_freqs_en = create_word_freqs(dataset_path / "train.en")
     with (base_path / "word_freqs_en.json").open("w") as f:
         json.dump(word_freqs_en, f, indent=2, ensure_ascii=False)
+
+    print("done.")
 
 
 if __name__ == "__main__":
