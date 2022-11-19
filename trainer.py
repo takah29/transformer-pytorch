@@ -5,22 +5,20 @@ import torch.nn.functional as F
 
 
 class TranslationModelTrainer:
-    def __init__(self, model, optimizer, dataset, device, lr=0.05):
+    def __init__(self, model, optimizer, device, train_dataset, valid_dataset=None, lr=0.05):
         self._device = device
         self._model = model.to(self._device)
 
         self._optimizer = optimizer(self._model.parameters(), lr=lr)
-        self._dataset = dataset
-        _, self._target_vocab_size = dataset.get_vocab_size()
-
-    # def _collate_fn(self, batch):
-    #     print(batch)
-    #     batch["dec_target"] = F.one_hot(batch["dec_target"], num_classes=self._target_vocab_size)
-    #     return batch
+        self._train_dataset = train_dataset
+        self._valid_dataset = valid_dataset
+        _, self._target_vocab_size = train_dataset.get_vocab_size()
 
     def fit(self, batch_size, num_epoch):
         criterion = nn.CrossEntropyLoss()
-        data_loader = DataLoader(self._dataset, batch_size=batch_size, shuffle=True)
+        train_data_loader = DataLoader(
+            self._train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
+        )
 
         loss_list = []
         s = 0.0
@@ -29,7 +27,7 @@ class TranslationModelTrainer:
         for epoch in range(num_epoch):
             print("epoch: ", epoch)
             s = 0.0
-            for i, batch in enumerate(data_loader):
+            for i, batch in enumerate(train_data_loader):
                 # print(i + 1, x.size(), t.size())
                 enc_input_text = batch["enc_input"]["text"].to(self._device)
                 dec_input_text = batch["dec_input"]["text"].to(self._device)
@@ -47,18 +45,21 @@ class TranslationModelTrainer:
                     .to(torch.float32)
                     .to(self._device)
                 )
-                # print(
-                #     f"batch: {i+1}",
-                #     y,
-                #     t.shape,
-                # )
+                #print(y[0].shape, t[0].shape)
+
                 loss = criterion(y, t)
+                print(loss.item())
                 self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
                 s += loss.item()
             loss_list.append(s)
             print(s)
+
+        import matplotlib.pyplot as plt
+
+        plt.plot(loss_list)
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -67,8 +68,8 @@ if __name__ == "__main__":
     from transformer import Transformer
 
     # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
-    en_txt_file_path = Path("dataset/small_parallel_enja-master/dev.en").resolve()
-    ja_txt_file_path = Path("dataset/small_parallel_enja-master/dev.ja").resolve()
+    en_txt_file_path = Path("dataset/small_parallel_enja-master/train.en").resolve()
+    ja_txt_file_path = Path("dataset/small_parallel_enja-master/train.ja").resolve()
     en_word_freqs_path = Path("word_freqs_en.json").resolve()
     ja_word_freqs_path = Path("word_freqs_ja.json").resolve()
 
@@ -91,6 +92,6 @@ if __name__ == "__main__":
 
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     translation_model_trainer = TranslationModelTrainer(
-        transformer, optim.Adam, text_pair_dataset, device, 0.5
+        transformer, optim.AdamW, device, text_pair_dataset, None, 1.7e-4
     )
-    translation_model_trainer.fit(batch_size=1000, num_epoch=20)
+    translation_model_trainer.fit(batch_size=500, num_epoch=2)
