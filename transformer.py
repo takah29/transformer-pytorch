@@ -88,12 +88,11 @@ class MultiheadAttention(nn.Module):
 
 
 class FeedForwardNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim):
+    def __init__(self, n_dim, hidden_dim):
         super().__init__()
 
-        self.linear1 = nn.Linear(input_dim, hidden_dim)
-        self.linear2 = nn.Linear(hidden_dim, input_dim)
-        # self.activate = nn.GELU()
+        self.linear1 = nn.Linear(n_dim, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, n_dim)
 
     def forward(self, x):
         y = torch.relu(self.linear1(x))
@@ -103,20 +102,20 @@ class FeedForwardNetwork(nn.Module):
 
 
 class PositionalEncoder(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self, n_dim):
         super().__init__()
 
-        self.input_dim = input_dim
+        self.n_dim = n_dim
 
     def _calc_pe(self, token_size):
         result = []
         pos_v = torch.arange(token_size)
 
-        for i in range(self.input_dim):
+        for i in range(self.n_dim):
             if i % 2 == 0:
-                v = torch.sin(pos_v / 10000 ** (i / self.input_dim))
+                v = torch.sin(pos_v / 10000 ** (i / self.n_dim))
             elif i % 2 == 1:
-                v = torch.cos(pos_v / 10000 ** (i / self.input_dim))
+                v = torch.cos(pos_v / 10000 ** (i / self.n_dim))
             result.append(v)
 
         return torch.vstack(result).transpose(1, 0)
@@ -127,7 +126,7 @@ class PositionalEncoder(nn.Module):
 
 
 class TransformerEncoderBlock(nn.Module):
-    def __init__(self, n_dim, hidden_dim, token_size, head_num):
+    def __init__(self, n_dim, hidden_dim, head_num):
         super().__init__()
 
         self.attention = MultiheadAttention(n_dim, head_num)
@@ -145,14 +144,14 @@ class TransformerEncoderBlock(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num):
+    def __init__(self, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.positional_encoder = PositionalEncoder(n_dim)
         self.enc_blocks = nn.ModuleList(
             [
-                TransformerEncoderBlock(n_dim, hidden_dim, token_size, head_num)
+                TransformerEncoderBlock(n_dim, hidden_dim, head_num)
                 for _ in range(n_enc_blocks)
             ]
         )
@@ -168,7 +167,7 @@ class TransformerEncoder(nn.Module):
 
 
 class TransformerDecoderBlock(nn.Module):
-    def __init__(self, n_dim, hidden_dim, token_size, head_num):
+    def __init__(self, n_dim, hidden_dim, head_num):
         super().__init__()
 
         self.masked_attention = MultiheadAttention(n_dim, head_num, masking=True)
@@ -190,14 +189,14 @@ class TransformerDecoderBlock(nn.Module):
 
 
 class TransformerDecoder(nn.Module):
-    def __init__(self, vocab_size, n_dim, hidden_dim, token_size, n_dec_blocks, head_num):
+    def __init__(self, vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.pe = PositionalEncoder(n_dim)
         self.dec_blocks = nn.ModuleList(
             [
-                TransformerDecoderBlock(n_dim, hidden_dim, token_size, head_num)
+                TransformerDecoderBlock(n_dim, hidden_dim, head_num)
                 for _ in range(n_dec_blocks)
             ]
         )
@@ -219,12 +218,12 @@ class TransformerClassifier(nn.Module):
     """TransformerEncoderを使用した分類用ネットワーク"""
 
     def __init__(
-        self, n_classes, vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
+        self, n_classes, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num
     ):
         super().__init__()
 
         self.encoder = TransformerEncoder(
-            vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
+            vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num
         )
         self.linear = nn.Linear(n_dim, n_classes)
 
@@ -243,7 +242,6 @@ class Transformer(nn.Module):
         dec_vocab_size,
         n_dim,
         hidden_dim,
-        token_size,
         n_enc_blocks,
         n_dec_blocks,
         head_num,
@@ -251,10 +249,10 @@ class Transformer(nn.Module):
         super().__init__()
 
         self.encoder = TransformerEncoder(
-            enc_vocab_size, n_dim, hidden_dim, token_size, n_enc_blocks, head_num
+            enc_vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num
         )
         self.decoder = TransformerDecoder(
-            dec_vocab_size, n_dim, hidden_dim, token_size, n_dec_blocks, head_num
+            dec_vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num
         )
 
     def forward(self, enc_x, dec_x, enc_mask, dec_mask):
@@ -286,10 +284,9 @@ if __name__ == "__main__":
         "dec_vocab_size": dec_vocab_size,
         "n_dim": 64,
         "hidden_dim": 32,
-        "token_size": 40,
-        "n_enc_blocks": 3,
-        "n_dec_blocks": 2,
-        "head_num": 4,
+        "n_enc_blocks": 1,
+        "n_dec_blocks": 1,
+        "head_num": 1,
     }
     transformer = Transformer(**params)
 
