@@ -21,12 +21,9 @@ class TranslationModelTrainer:
         )
 
         loss_list = []
-        s = 0.0
         self._model.train()
-
-        for epoch in range(num_epoch):
-            print("epoch: ", epoch)
-            s = 0.0
+        for i in range(num_epoch):
+            print("epoch: ", i + 1)
             for i, batch in enumerate(train_data_loader):
                 # print(i + 1, x.size(), t.size())
                 enc_input_text = batch["enc_input"]["text"].to(self._device)
@@ -45,25 +42,22 @@ class TranslationModelTrainer:
                     .to(torch.float32)
                     .to(self._device)
                 )
-                #print(y[0].shape, t[0].shape)
 
                 loss = criterion(y, t)
                 print(loss.item())
                 self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
-                s += loss.item()
-            loss_list.append(s)
-            print(s)
+                loss_list.append(loss.item())
 
-        import matplotlib.pyplot as plt
-
-        plt.plot(loss_list)
-        plt.show()
+        return loss_list
 
 
 if __name__ == "__main__":
     from pathlib import Path
+
+    import matplotlib.pyplot as plt
+
     from dataset import TextPairDataset
     from transformer import Transformer
 
@@ -93,4 +87,7 @@ if __name__ == "__main__":
     translation_model_trainer = TranslationModelTrainer(
         transformer, optim.AdamW, device, text_pair_dataset, None, 1.7e-4
     )
-    translation_model_trainer.fit(batch_size=500, num_epoch=2)
+    loss_list = translation_model_trainer.fit(batch_size=500, num_epoch=2)
+
+    plt.plot(loss_list)
+    plt.show()

@@ -22,7 +22,6 @@ class TextClassificationModelTrainer:
 
         loss_list = []
         self._model.train()
-
         for i in range(num_epoch):
             print("epoch: ", i + 1)
             for i, batch in enumerate(train_data_loader):
@@ -45,14 +44,14 @@ class TextClassificationModelTrainer:
                 self._optimizer.step()
                 loss_list.append(loss.item())
 
-        import matplotlib.pyplot as plt
-
-        plt.plot(loss_list)
-        plt.show()
+        return loss_list
 
 
 if __name__ == "__main__":
     from pathlib import Path
+
+    import matplotlib.pyplot as plt
+
     from dataset import TextClassificationDataset
     from transformer import TransformerClassifier
 
@@ -80,4 +79,7 @@ if __name__ == "__main__":
     text_classification_model_trainer = TextClassificationModelTrainer(
         transformer_classifier, optim.Adam, device, text_classification_dataset, None, 1.7e-3
     )
-    text_classification_model_trainer.fit(batch_size=1000, num_epoch=2)
+    loss_list = text_classification_model_trainer.fit(batch_size=1000, num_epoch=2)
+
+    plt.plot(loss_list)
+    plt.show()
