@@ -83,7 +83,6 @@ if __name__ == "__main__":
         "dec_vocab_size": dec_vocab_size,
         "n_dim": 64,
         "hidden_dim": 32,
-        "token_size": 40,
         "n_enc_blocks": 3,
         "n_dec_blocks": 2,
         "head_num": 4,
