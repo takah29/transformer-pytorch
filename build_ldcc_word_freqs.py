@@ -12,23 +12,23 @@ from janome.tokenizer import Tokenizer
 def get_ldcc_labeled_tokenized_text_list(base_dir_path):
     """ldccデータセットを単語リスト化したデータを返す"""
     # フォルダ名: クラス番号
-    dir_names = {
-        "dokujo-tsushin": 0,
-        "kaden-channel": 1,
-        "movie-enter": 2,
-        "smax": 3,
-        "topic-news": 4,
-        "it-life-hack": 5,
-        "livedoor-homme": 6,
-        "peachy": 7,
-        "sports-watch": 8,
-    }
+    dir_names = [
+        "dokujo-tsushin",
+        "kaden-channel",
+        "movie-enter",
+        "smax",
+        "topic-news",
+        "it-life-hack",
+        "livedoor-homme",
+        "peachy",
+        "sports-watch",
+    ]
+
     tokenizer = Tokenizer()
-    data = {"tokenized_text_list": [], "class_label_list": [], "class_name_list": []}
-    for dir_name, class_num in dir_names.items():
+    data = {"tokenized_text_list": [], "class_label_list": [], "class_name_list": dir_names}
+    for class_num, dir_name in enumerate(dir_names):
         dir_path = base_dir_path / dir_name
         print("process of", dir_path.name)
-
         for filepath in [
             filepath for filepath in dir_path.iterdir() if filepath.name != "LICENSE.txt"
         ]:
@@ -41,7 +41,6 @@ def get_ldcc_labeled_tokenized_text_list(base_dir_path):
                 tokenized_text = tokenizer.tokenize(line, wakati=True)
                 data["tokenized_text_list"].append(list(tokenized_text))
                 data["class_label_list"].append(class_num)
-                data["class_name_list"].append(dir_name)
 
     return data
 
