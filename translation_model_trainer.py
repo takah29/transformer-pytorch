@@ -2,14 +2,41 @@ import torch
 from torch.utils.data import DataLoader
 from torch import nn, optim
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import _LRScheduler
+
+
+class TransformerLRScheduler(_LRScheduler):
+    def __init__(self, optimizer, n_dim, warmup_steps):
+        self._ndim = n_dim
+        self._warmup_steps = warmup_steps
+
+        self.optimizer = optimizer
+        self._steps = 0
+
+    def step(self):
+        self._steps += 1
+
+        self.lr = self._ndim * min(
+            self._steps ** (-0.5), self._steps * self._warmup_steps ** (-1.5)
+        )
+        self.set_lr(self.optimizer, self.lr)
+
+        return self.lr
+
+    @staticmethod
+    def set_lr(optimizer, lr):
+        for g in optimizer.param_groups:
+            g["lr"] = lr
 
 
 class TranslationModelTrainer:
-    def __init__(self, model, optimizer, device, train_dataset, valid_dataset=None, lr=0.05):
+    def __init__(self, model, optimizer, lr_scheduler, device, train_dataset, valid_dataset=None):
         self._device = device
         self._model = model.to(self._device)
 
-        self._optimizer = optimizer(self._model.parameters(), lr=lr)
+        self._optimizer = optimizer
+        self._lr_scheduler = lr_scheduler
+
         self._train_dataset = train_dataset
         self._valid_dataset = valid_dataset
         _, self._target_vocab_size = train_dataset.get_vocab_size()
@@ -48,9 +75,18 @@ class TranslationModelTrainer:
                 self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
+                self._lr_scheduler.step()
                 loss_list.append(loss.item())
 
         return loss_list
+
+
+def get_instance(params):
+    transformer = Transformer(**params)
+    optimizer = optim.Adam(transformer.parameters(), lr=0.0, betas=(0.9, 0.98), eps=10e-9)
+    lr_scheduler = TransformerLRScheduler(optimizer, params["n_dim"], warmup_steps=4000)
+
+    return transformer, optimizer, lr_scheduler
 
 
 if __name__ == "__main__":
@@ -75,17 +111,16 @@ if __name__ == "__main__":
     params = {
         "enc_vocab_size": enc_vocab_size,
         "dec_vocab_size": dec_vocab_size,
-        "n_dim": 64,
+        "n_dim": 256,
         "hidden_dim": 32,
-        "n_enc_blocks": 3,
-        "n_dec_blocks": 2,
-        "head_num": 4,
+        "n_enc_blocks": 6,
+        "n_dec_blocks": 6,
+        "head_num": 8,
     }
-    transformer = Transformer(**params)
-
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+    model, optimizer, scheduler = get_instance(params)
     translation_model_trainer = TranslationModelTrainer(
-        transformer, optim.AdamW, device, text_pair_dataset, None, 1.7e-4
+        model, optimizer, scheduler, device, text_pair_dataset, None
     )
     loss_list = translation_model_trainer.fit(batch_size=500, num_epoch=2)
 
