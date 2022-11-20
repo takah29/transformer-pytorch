@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 from torch import nn, optim
@@ -7,7 +8,7 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 class TransformerLRScheduler(_LRScheduler):
     def __init__(self, optimizer, n_dim, warmup_steps):
-        self._ndim = n_dim
+        self._n_dim = n_dim
         self._warmup_steps = warmup_steps
 
         self.optimizer = optimizer
@@ -16,7 +17,7 @@ class TransformerLRScheduler(_LRScheduler):
     def step(self):
         self._steps += 1
 
-        self.lr = self._ndim * min(
+        self.lr = self._n_dim * min(
             self._steps ** (-0.5), self._steps * self._warmup_steps ** (-1.5)
         )
         self.set_lr(self.optimizer, self.lr)
@@ -42,7 +43,8 @@ class TranslationModelTrainer:
         _, self._target_vocab_size = train_dataset.get_vocab_size()
 
     def fit(self, batch_size, num_epoch):
-        criterion = nn.CrossEntropyLoss()
+        print(self._train_dataset.get_pad_id())
+        criterion = nn.CrossEntropyLoss(ignore_index=self._train_dataset.get_pad_id()[0])
         train_data_loader = DataLoader(
             self._train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
         )
@@ -51,7 +53,8 @@ class TranslationModelTrainer:
         self._model.train()
         for i in range(num_epoch):
             print("epoch: ", i + 1)
-            for i, batch in enumerate(train_data_loader):
+            s = 0.0
+            for batch in tqdm(train_data_loader):
                 # print(i + 1, x.size(), t.size())
                 enc_input_text = batch["enc_input"]["text"].to(self._device)
                 dec_input_text = batch["dec_input"]["text"].to(self._device)
@@ -64,26 +67,34 @@ class TranslationModelTrainer:
                     enc_input_mask,
                     dec_input_mask,
                 )
-                t = (
-                    F.one_hot(batch["dec_target"], num_classes=self._target_vocab_size)
-                    .to(torch.float32)
-                    .to(self._device)
-                )
+                # t = (
+                #     F.one_hot(batch["dec_target"], num_classes=self._target_vocab_size)
+                #     .to(self._device)
+                # )
+                # print(t)
+                t = batch["dec_target"].to(self._device)
 
-                loss = criterion(y, t)
-                print(loss.item())
+                #print(y.reshape(-1, y.shape[-1]).shape, t.reshape(-1).shape)
+                loss = criterion(y.reshape(-1, y.shape[-1]), t.reshape(-1))
+                #print(loss)
+                s += loss.item()
                 self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
-                self._lr_scheduler.step()
+
+                if self._lr_scheduler is not None:
+                    self._lr_scheduler.step()
+
                 loss_list.append(loss.item())
+            print("loss:", s / len(train_data_loader.dataset))
 
         return loss_list
 
 
 def get_instance(params):
     transformer = Transformer(**params)
-    optimizer = optim.Adam(transformer.parameters(), lr=0.0, betas=(0.9, 0.98), eps=10e-9)
+    #optimizer = optim.Adam(transformer.parameters(), lr=0.0, betas=(0.9, 0.98), eps=10e-9)
+    optimizer = optim.Adam(transformer.parameters())
     lr_scheduler = TransformerLRScheduler(optimizer, params["n_dim"], warmup_steps=4000)
 
     return transformer, optimizer, lr_scheduler
@@ -111,18 +122,18 @@ if __name__ == "__main__":
     params = {
         "enc_vocab_size": enc_vocab_size,
         "dec_vocab_size": dec_vocab_size,
-        "n_dim": 256,
-        "hidden_dim": 32,
-        "n_enc_blocks": 6,
-        "n_dec_blocks": 6,
+        "n_dim": 240,
+        "hidden_dim": 100,
+        "n_enc_blocks": 2,
+        "n_dec_blocks": 2,
         "head_num": 8,
     }
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     model, optimizer, scheduler = get_instance(params)
     translation_model_trainer = TranslationModelTrainer(
-        model, optimizer, scheduler, device, text_pair_dataset, None
+        model, optimizer, None, device, text_pair_dataset, None
     )
-    loss_list = translation_model_trainer.fit(batch_size=500, num_epoch=2)
+    loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=15)
 
     plt.plot(loss_list)
     plt.show()
