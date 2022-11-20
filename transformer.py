@@ -102,14 +102,18 @@ class FeedForwardNetwork(nn.Module):
 
 
 class PositionalEncoder(nn.Module):
-    def __init__(self, n_dim):
+    def __init__(self, n_dim, dropout=0.1, maxlen=1000):
         super().__init__()
 
         self.n_dim = n_dim
+        self.maxlen = maxlen
 
-    def _calc_pe(self, token_size):
+        self.dropout = nn.Dropout(dropout)
+        self.register_buffer("embedding_pos", self._calc_pe(maxlen))
+
+    def _calc_pe(self, maxlen):
         result = []
-        pos_v = torch.arange(token_size)
+        pos_v = torch.arange(maxlen)
 
         for i in range(self.n_dim):
             if i % 2 == 0:
@@ -121,8 +125,7 @@ class PositionalEncoder(nn.Module):
         return torch.vstack(result).transpose(1, 0)
 
     def forward(self, x):
-        _, token_size, _ = x.shape
-        return x + self._calc_pe(token_size).to(x.device)
+        return self.dropout(x + self.embedding_pos[: x.size(1), :])
 
 
 class TransformerEncoderBlock(nn.Module):
