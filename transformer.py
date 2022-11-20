@@ -153,10 +153,7 @@ class TransformerEncoder(nn.Module):
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.positional_encoder = PositionalEncoder(n_dim)
         self.enc_blocks = nn.ModuleList(
-            [
-                TransformerEncoderBlock(n_dim, hidden_dim, head_num)
-                for _ in range(n_enc_blocks)
-            ]
+            [TransformerEncoderBlock(n_dim, hidden_dim, head_num) for _ in range(n_enc_blocks)]
         )
 
     def forward(self, x, src_mask=None):
@@ -198,10 +195,7 @@ class TransformerDecoder(nn.Module):
         self.embedding = nn.Embedding(vocab_size, n_dim)
         self.pe = PositionalEncoder(n_dim)
         self.dec_blocks = nn.ModuleList(
-            [
-                TransformerDecoderBlock(n_dim, hidden_dim, head_num)
-                for _ in range(n_dec_blocks)
-            ]
+            [TransformerDecoderBlock(n_dim, hidden_dim, head_num) for _ in range(n_dec_blocks)]
         )
         self.out_linear = nn.Linear(n_dim, vocab_size)
 
@@ -220,14 +214,10 @@ class TransformerDecoder(nn.Module):
 class TransformerClassifier(nn.Module):
     """TransformerEncoderを使用した分類用ネットワーク"""
 
-    def __init__(
-        self, n_classes, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num
-    ):
+    def __init__(self, n_classes, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num):
         super().__init__()
 
-        self.encoder = TransformerEncoder(
-            vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num
-        )
+        self.encoder = TransformerEncoder(vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num)
         self.linear = nn.Linear(n_dim, n_classes)
 
     def forward(self, x, mask=None):
@@ -251,12 +241,15 @@ class Transformer(nn.Module):
     ):
         super().__init__()
 
-        self.encoder = TransformerEncoder(
-            enc_vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num
-        )
-        self.decoder = TransformerDecoder(
-            dec_vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num
-        )
+        self.encoder = TransformerEncoder(enc_vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num)
+        self.decoder = TransformerDecoder(dec_vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num)
+
+        self._initialize()
+
+    def _initialize(self):
+        for param in self.parameters():
+            if param.dim() > 1:
+                nn.init.xavier_uniform_(param)
 
     def forward(self, enc_x, dec_x, enc_mask, dec_mask):
         y = self.encoder(enc_x, enc_mask)
