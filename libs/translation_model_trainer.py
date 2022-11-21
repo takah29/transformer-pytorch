@@ -131,42 +131,92 @@ if __name__ == "__main__":
     from text_pair_dataset import TextPairDataset
     from transformer import Transformer
 
-    # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
-    base_path = Path("../dataset/small_parallel_enja-master").resolve()
-    en_txt_file_path = base_path / "train.en"
-    ja_txt_file_path = base_path / "train.ja"
-    en_word_freqs_path = Path("../word_freqs_en.json").resolve()
-    ja_word_freqs_path = Path("../word_freqs_ja.json").resolve()
-    train_dataset = TextPairDataset.create(
-        en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
-    )
+    def test1():
+        # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
+        base_path = Path("../small_parallel_enja_dataset").resolve()
+        en_txt_file_path = base_path / "small_parallel_enja-master" / "train.en"
+        ja_txt_file_path = base_path / "small_parallel_enja-master" / "train.ja"
+        en_word_freqs_path = base_path / "word_freqs_en.json"
+        ja_word_freqs_path = base_path / "word_freqs_ja.json"
+        train_dataset = TextPairDataset.create(
+            en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
+        )
 
-    en_val_txt_file_path = base_path / "dev.en"
-    ja_val_txt_file_path = base_path / "dev.ja"
-    valid_dataset = TextPairDataset.create(
-        en_val_txt_file_path, ja_val_txt_file_path, en_word_freqs_path, ja_word_freqs_path
-    )
+        en_val_txt_file_path = base_path / "small_parallel_enja-master" / "dev.en"
+        ja_val_txt_file_path = base_path / "small_parallel_enja-master" / "dev.ja"
+        valid_dataset = TextPairDataset.create(
+            en_val_txt_file_path, ja_val_txt_file_path, en_word_freqs_path, ja_word_freqs_path
+        )
 
-    enc_vocab_size, dec_vocab_size = train_dataset.get_vocab_size()
-    params = {
-        "enc_vocab_size": enc_vocab_size,
-        "dec_vocab_size": dec_vocab_size,
-        "n_dim": 240,
-        "hidden_dim": 100,
-        "n_enc_blocks": 2,
-        "n_dec_blocks": 2,
-        "head_num": 8,
-        "dropout_rate": 0.1,
-    }
-    device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+        enc_vocab_size, dec_vocab_size = train_dataset.get_vocab_size()
+        params = {
+            "enc_vocab_size": enc_vocab_size,
+            "dec_vocab_size": dec_vocab_size,
+            "n_dim": 240,
+            "hidden_dim": 100,
+            "n_enc_blocks": 2,
+            "n_dec_blocks": 2,
+            "head_num": 8,
+            "dropout_rate": 0.1,
+        }
+        device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
-    model, optimizer, scheduler = get_instance(params)
-    translation_model_trainer = TranslationModelTrainer(
-        model, optimizer, None, device, train_dataset, valid_dataset
-    )
-    train_loss_list, valid_loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=10)
+        model, optimizer, scheduler = get_instance(params)
+        translation_model_trainer = TranslationModelTrainer(
+            model, optimizer, None, device, train_dataset, valid_dataset
+        )
+        train_loss_list, valid_loss_list = translation_model_trainer.fit(
+            batch_size=128, num_epoch=10
+        )
 
-    plt.plot(train_loss_list)
-    plt.plot(valid_loss_list)
+        plt.plot(train_loss_list)
+        plt.plot(valid_loss_list)
 
-    plt.show()
+        plt.show()
+
+    # test1()
+
+    def test2():
+        # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
+        base_path = Path("../multi30k_dataset").resolve()
+        de_txt_file_path = base_path / "train.de"
+        en_txt_file_path = base_path / "train.en"
+        de_word_freqs_path = base_path / "word_freqs_de.json"
+        en_word_freqs_path = base_path / "word_freqs_en.json"
+        train_dataset = TextPairDataset.create(
+            de_txt_file_path, en_txt_file_path, de_word_freqs_path, en_word_freqs_path
+        )
+
+        de_val_txt_file_path = base_path / "val.de"
+        en_val_txt_file_path = base_path / "val.en"
+        valid_dataset = TextPairDataset.create(
+            de_val_txt_file_path, en_val_txt_file_path, de_word_freqs_path, en_word_freqs_path
+        )
+
+        enc_vocab_size, dec_vocab_size = train_dataset.get_vocab_size()
+        params = {
+            "enc_vocab_size": enc_vocab_size,
+            "dec_vocab_size": dec_vocab_size,
+            "n_dim": 240,
+            "hidden_dim": 100,
+            "n_enc_blocks": 2,
+            "n_dec_blocks": 2,
+            "head_num": 8,
+            "dropout_rate": 0.1,
+        }
+        device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+
+        model, optimizer, scheduler = get_instance(params)
+        translation_model_trainer = TranslationModelTrainer(
+            model, optimizer, None, device, train_dataset, valid_dataset
+        )
+        train_loss_list, valid_loss_list = translation_model_trainer.fit(
+            batch_size=128, num_epoch=10
+        )
+
+        plt.plot(train_loss_list)
+        plt.plot(valid_loss_list)
+
+        plt.show()
+
+    test2()
