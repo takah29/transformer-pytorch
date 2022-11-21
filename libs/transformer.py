@@ -216,7 +216,6 @@ class TransformerDecoder(nn.Module):
             y = dec_block(y, z, x_mask, z_mask)
 
         y = self.out_linear(y)
-        y = F.softmax(y, dim=-1)
         return y
 
 
