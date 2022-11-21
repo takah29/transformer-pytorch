@@ -10,7 +10,7 @@ from libs.text_pair_dataset import get_tokenized_text_list
 
 
 def create_word_freqs(file_path: Path) -> dict:
-    tokenized_text_list = get_tokenized_text_list(file_path)
+    tokenized_text_list = get_tokenized_text_list(file_path, dot_spacing=True)
     counter = Counter(list(itertools.chain.from_iterable(tokenized_text_list)))
 
     return OrderedDict(sorted(counter.items(), key=lambda x: x[1], reverse=True))
