@@ -1,6 +1,7 @@
+from pathlib import Path
 from tqdm import tqdm
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from torch import nn, optim
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import _LRScheduler
@@ -39,6 +40,7 @@ class TranslationModelTrainer:
         device,
         train_dataset,
         valid_dataset=None,
+        save_path=None,
     ):
         self._device = device
         self._model = model.to(self._device)
@@ -48,11 +50,13 @@ class TranslationModelTrainer:
 
         self._train_dataset = train_dataset
         self._valid_dataset = valid_dataset
+        self._save_path = save_path
+
         _, self._target_vocab_size = train_dataset.get_vocab_size()
 
         self._criterion = nn.CrossEntropyLoss(ignore_index=self._train_dataset.get_pad_id()[0])
 
-    def fit(self, batch_size, num_epoch):
+    def fit(self, batch_size: int, num_epoch: int):
         train_loss = valid_loss = None
 
         train_data_loader = DataLoader(
@@ -75,14 +79,18 @@ class TranslationModelTrainer:
 
             if self._valid_dataset is not None:
                 self._model.eval()
-                valid_loss = self._run_epoch(valid_data_loader, is_train=True)
+                valid_loss = self._run_epoch(valid_data_loader, is_train=False)
                 valid_loss_list.append(valid_loss)
 
             print(f"train loss: {train_loss}, valid loss: {valid_loss}")
 
+            if self._save_path:
+                self._save_path.mkdir(exist_ok=True, parents=True)
+                torch.save(self._model.state_dict(), self._save_path / f"snapshot_epoch{i:03}.pth")
+
         return train_loss_list, valid_loss_list
 
-    def _run_epoch(self, data_loader, is_train):
+    def _run_epoch(self, data_loader, is_train: bool):
         s = 0.0
         for batch in tqdm(data_loader):
             # print(i + 1, x.size(), t.size())
