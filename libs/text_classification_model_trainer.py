@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
-    from dataset import TextClassificationDataset
+    from text_classification_dataset import TextClassificationDataset
     from transformer import TransformerClassifier
 
     # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく

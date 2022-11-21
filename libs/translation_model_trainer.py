@@ -67,16 +67,10 @@ class TranslationModelTrainer:
                     enc_input_mask,
                     dec_input_mask,
                 )
-                # t = (
-                #     F.one_hot(batch["dec_target"], num_classes=self._target_vocab_size)
-                #     .to(self._device)
-                # )
-                # print(t)
                 t = batch["dec_target"].to(self._device)
 
-                #print(y.reshape(-1, y.shape[-1]).shape, t.reshape(-1).shape)
+                # print(y.reshape(-1, y.shape[-1]).shape, t.reshape(-1).shape)
                 loss = criterion(y.reshape(-1, y.shape[-1]), t.reshape(-1))
-                #print(loss)
                 s += loss.item()
                 self._optimizer.zero_grad()
                 loss.backward()
@@ -93,7 +87,7 @@ class TranslationModelTrainer:
 
 def get_instance(params):
     transformer = Transformer(**params)
-    #optimizer = optim.Adam(transformer.parameters(), lr=0.0, betas=(0.9, 0.98), eps=10e-9)
+    # optimizer = optim.Adam(transformer.parameters(), lr=0.0, betas=(0.9, 0.98), eps=10e-9)
     optimizer = optim.Adam(transformer.parameters())
     lr_scheduler = TransformerLRScheduler(optimizer, params["n_dim"], warmup_steps=4000)
 
@@ -105,14 +99,14 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
-    from dataset import TextPairDataset
+    from text_pair_dataset import TextPairDataset
     from transformer import Transformer
 
     # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
-    en_txt_file_path = Path("dataset/small_parallel_enja-master/train.en").resolve()
-    ja_txt_file_path = Path("dataset/small_parallel_enja-master/train.ja").resolve()
-    en_word_freqs_path = Path("word_freqs_en.json").resolve()
-    ja_word_freqs_path = Path("word_freqs_ja.json").resolve()
+    en_txt_file_path = Path("../dataset/small_parallel_enja-master/train.en").resolve()
+    ja_txt_file_path = Path("../dataset/small_parallel_enja-master/train.ja").resolve()
+    en_word_freqs_path = Path("../word_freqs_en.json").resolve()
+    ja_word_freqs_path = Path("../word_freqs_ja.json").resolve()
 
     text_pair_dataset = TextPairDataset.create(
         en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
