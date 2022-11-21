@@ -4,7 +4,7 @@ from torch.nn import functional as F
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, n_dim, head_num, masking=False):
+    def __init__(self, n_dim, head_num, masking=False, dropout_rate=0.1):
         # 実装の簡易化のため次元をヘッド数で割り切れるかチェックする
         if n_dim % head_num != 0:
             raise ValueError("n_dim % head_num is not 0.")
@@ -21,6 +21,7 @@ class MultiheadAttention(nn.Module):
         self.q_linear = nn.Linear(n_dim, n_dim, bias=False)
         self.k_linear = nn.Linear(n_dim, n_dim, bias=False)
         self.v_linear = nn.Linear(n_dim, n_dim, bias=False)
+        self.dropout = nn.Dropout(dropout_rate)
         self.out_linear = nn.Linear(n_dim, n_dim)
 
     def forward(self, x1, x2, x2_mask=None):
@@ -69,7 +70,8 @@ class MultiheadAttention(nn.Module):
 
         # (batch, head_num, x1_seq_size, x2_seq_size) @ (batch, head_num, x2_seq_size, head_dim)
         # -> (batch, head_num, x1_seq_size, head_dim)
-        attention = F.softmax(dots, dim=-1) @ v
+        attention_weight = self.dropout(F.softmax(dots, dim=-1))
+        attention = attention_weight @ v
 
         # (batch, head_num, x1_seq_size, head_dim) -> (batch, x1_seq_size, n_dim)
         y = attention.transpose(1, 2).reshape(batch_size, x1_seq_size, self.n_dim)
@@ -88,27 +90,29 @@ class MultiheadAttention(nn.Module):
 
 
 class FeedForwardNetwork(nn.Module):
-    def __init__(self, n_dim, hidden_dim):
+    def __init__(self, n_dim, hidden_dim, dropout_rate=0.1):
         super().__init__()
 
         self.linear1 = nn.Linear(n_dim, hidden_dim)
         self.linear2 = nn.Linear(hidden_dim, n_dim)
+        self.dropout = nn.Dropout(dropout_rate)
 
     def forward(self, x):
         y = torch.relu(self.linear1(x))
+        y = self.dropout(y)
         y = self.linear2(y)
 
         return y
 
 
 class PositionalEncoder(nn.Module):
-    def __init__(self, n_dim, dropout=0.1, maxlen=1000):
+    def __init__(self, n_dim, dropout_rate=0.1, maxlen=1000):
         super().__init__()
 
         self.n_dim = n_dim
         self.maxlen = maxlen
 
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout_rate)
         self.register_buffer("embedding_pos", self._calc_pe(maxlen))
 
     def _calc_pe(self, maxlen):
@@ -129,29 +133,31 @@ class PositionalEncoder(nn.Module):
 
 
 class TransformerEncoderBlock(nn.Module):
-    def __init__(self, n_dim, hidden_dim, head_num):
+    def __init__(self, n_dim, hidden_dim, head_num, dropout_rate=0.1):
         super().__init__()
 
         self.attention = MultiheadAttention(n_dim, head_num)
+        self.dropout1 = nn.Dropout(dropout_rate)
         self.norm1 = nn.LayerNorm((n_dim))
         self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
+        self.dropout2 = nn.Dropout(dropout_rate)
         self.norm2 = nn.LayerNorm((n_dim))
 
     def forward(self, x, x_mask=None):
-        y = x + self.attention(x, x, x_mask)
+        y = x + self.dropout1(self.attention(x, x, x_mask))
         y = self.norm1(y)
-        y = y + self.feedforward(y)
+        y = y + self.dropout2(self.feedforward(y))
         y = self.norm2(y)
 
         return y
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num):
+    def __init__(self, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num, dropout_rate=0.1):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
-        self.positional_encoder = PositionalEncoder(n_dim)
+        self.positional_encoder = PositionalEncoder(n_dim, dropout_rate)
         self.enc_blocks = nn.ModuleList(
             [TransformerEncoderBlock(n_dim, hidden_dim, head_num) for _ in range(n_enc_blocks)]
         )
@@ -167,33 +173,36 @@ class TransformerEncoder(nn.Module):
 
 
 class TransformerDecoderBlock(nn.Module):
-    def __init__(self, n_dim, hidden_dim, head_num):
+    def __init__(self, n_dim, hidden_dim, head_num, dropout_rate=0.1):
         super().__init__()
 
         self.masked_attention = MultiheadAttention(n_dim, head_num, masking=True)
+        self.dropout1 = nn.Dropout(dropout_rate)
         self.norm1 = nn.LayerNorm((n_dim))
         self.attention = MultiheadAttention(n_dim, head_num)
+        self.dropout2 = nn.Dropout(dropout_rate)
         self.norm2 = nn.LayerNorm((n_dim))
         self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
+        self.dropout3 = nn.Dropout(dropout_rate)
         self.norm3 = nn.LayerNorm((n_dim))
 
     def forward(self, x, z, x_mask=None, z_mask=None):
-        y = x + self.masked_attention(x, x, x_mask)
+        y = x + self.dropout1(self.masked_attention(x, x, x_mask))
         y = self.norm1(y)
-        y = y + self.attention(y, z, z_mask)
+        y = y + self.dropout2(self.attention(y, z, z_mask))
         y = self.norm2(y)
-        y = y + self.feedforward(y)
+        y = y + self.dropout3(self.feedforward(y))
         y = self.norm3(y)
 
         return y
 
 
 class TransformerDecoder(nn.Module):
-    def __init__(self, vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num):
+    def __init__(self, vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num, dropout_rate=0.1):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
-        self.pe = PositionalEncoder(n_dim)
+        self.pe = PositionalEncoder(n_dim, dropout_rate)
         self.dec_blocks = nn.ModuleList(
             [TransformerDecoderBlock(n_dim, hidden_dim, head_num) for _ in range(n_dec_blocks)]
         )
@@ -214,10 +223,14 @@ class TransformerDecoder(nn.Module):
 class TransformerClassifier(nn.Module):
     """TransformerEncoderを使用した分類用ネットワーク"""
 
-    def __init__(self, n_classes, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num):
+    def __init__(
+        self, n_classes, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num, dropout_rate=0.1
+    ):
         super().__init__()
 
-        self.encoder = TransformerEncoder(vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num)
+        self.encoder = TransformerEncoder(
+            vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num, dropout_rate
+        )
         self.linear = nn.Linear(n_dim, n_classes)
 
     def forward(self, x, mask=None):
@@ -238,11 +251,16 @@ class Transformer(nn.Module):
         n_enc_blocks,
         n_dec_blocks,
         head_num,
+        dropout_rate=0.1,
     ):
         super().__init__()
 
-        self.encoder = TransformerEncoder(enc_vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num)
-        self.decoder = TransformerDecoder(dec_vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num)
+        self.encoder = TransformerEncoder(
+            enc_vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num, dropout_rate
+        )
+        self.decoder = TransformerDecoder(
+            dec_vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num, dropout_rate
+        )
 
         self._initialize()
 
@@ -283,6 +301,7 @@ if __name__ == "__main__":
         "n_enc_blocks": 1,
         "n_dec_blocks": 1,
         "head_num": 1,
+        "dropout_rate": 0.1,
     }
     transformer = Transformer(**params)
 
