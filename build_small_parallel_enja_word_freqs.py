@@ -5,7 +5,7 @@ from collections import Counter, OrderedDict
 import json
 import itertools
 
-from dataset import get_tokenized_text_list
+from libs.text_pair_dataset import get_tokenized_text_list
 
 
 def create_word_freqs(file_path: Path) -> dict:
@@ -19,7 +19,9 @@ def main():
     # データセットのアドレスと保存ファイル名
     url = "https://github.com/odashi/small_parallel_enja/archive/refs/heads/master.zip"
     file_name = "small_parallel_enja-master.zip"
-    base_path = Path(__file__).resolve().parent
+    base_path = Path(__file__).resolve().parent / "small_parallel_enja_dataset"
+    base_path.mkdir(exist_ok=True, parents=True)
+
     zip_path = base_path / file_name
 
     # 存在しない場合にファイルをダウンロードする
@@ -29,8 +31,8 @@ def main():
 
     # zipファイルを展開する
     print(f"expand {file_name}")
-    unpack_archive(zip_path, base_path / "dataset")
-    dataset_path = base_path / "dataset" / "small_parallel_enja-master"
+    unpack_archive(zip_path, base_path)
+    dataset_path = base_path / "small_parallel_enja-master"
 
     # 単語ID辞書をjson形式で保存する
     print("create word frequency file...")
