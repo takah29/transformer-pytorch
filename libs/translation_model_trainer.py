@@ -42,35 +42,57 @@ class TranslationModelTrainer:
         self._valid_dataset = valid_dataset
         _, self._target_vocab_size = train_dataset.get_vocab_size()
 
+        self._criterion = nn.CrossEntropyLoss(ignore_index=self._train_dataset.get_pad_id()[0])
+
     def fit(self, batch_size, num_epoch):
-        criterion = nn.CrossEntropyLoss(ignore_index=self._train_dataset.get_pad_id()[0])
         train_data_loader = DataLoader(
             self._train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
         )
+        train_loss = None
+        train_loss_list = []
 
-        loss_list = []
+        if self._valid_dataset is not None:
+            valid_data_loader = DataLoader(
+                self._valid_dataset, batch_size=batch_size, shuffle=True, num_workers=4
+            )
+            valid_loss = None
+            valid_loss_list = []
+
         self._model.train()
         for i in range(num_epoch):
             print("epoch: ", i + 1)
-            s = 0.0
-            for batch in tqdm(train_data_loader):
-                # print(i + 1, x.size(), t.size())
-                enc_input_text = batch["enc_input"]["text"].to(self._device)
-                dec_input_text = batch["dec_input"]["text"].to(self._device)
-                enc_input_mask = batch["enc_input"]["mask"].to(self._device)
-                dec_input_mask = batch["dec_input"]["mask"].to(self._device)
+            train_loss = self._run_epoch(train_data_loader, is_train=True)
+            train_loss_list.append(train_loss)
 
-                y = self._model(
-                    enc_input_text,
-                    dec_input_text,
-                    enc_input_mask,
-                    dec_input_mask,
-                )
-                t = batch["dec_target"].to(self._device)
+            if self._valid_dataset is not None:
+                valid_loss = self._run_epoch(valid_data_loader, is_train=True)
+                valid_loss_list.append(valid_loss)
 
-                # print(y.reshape(-1, y.shape[-1]).shape, t.reshape(-1).shape)
-                loss = criterion(y.reshape(-1, y.shape[-1]), t.reshape(-1))
-                s += loss.item()
+            print(f"train loss: {train_loss}, valid loss: {valid_loss}")
+
+        return train_loss_list, valid_loss_list
+
+    def _run_epoch(self, data_loader, is_train):
+        s = 0.0
+        for batch in tqdm(data_loader):
+            # print(i + 1, x.size(), t.size())
+            enc_input_text = batch["enc_input"]["text"].to(self._device)
+            dec_input_text = batch["dec_input"]["text"].to(self._device)
+            enc_input_mask = batch["enc_input"]["mask"].to(self._device)
+            dec_input_mask = batch["dec_input"]["mask"].to(self._device)
+
+            y = self._model(
+                enc_input_text,
+                dec_input_text,
+                enc_input_mask,
+                dec_input_mask,
+            )
+            t = batch["dec_target"].to(self._device)
+
+            loss = self._criterion(y.reshape(-1, y.shape[-1]), t.reshape(-1))
+            s += loss.item()
+
+            if is_train:
                 self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
@@ -78,10 +100,7 @@ class TranslationModelTrainer:
                 if self._lr_scheduler is not None:
                     self._lr_scheduler.step()
 
-                loss_list.append(loss.item())
-            print("loss:", s / len(train_data_loader.dataset))
-
-        return loss_list
+        return s / len(data_loader.dataset)
 
 
 def get_instance(params):
@@ -106,12 +125,17 @@ if __name__ == "__main__":
     ja_txt_file_path = Path("../dataset/small_parallel_enja-master/train.ja").resolve()
     en_word_freqs_path = Path("../word_freqs_en.json").resolve()
     ja_word_freqs_path = Path("../word_freqs_ja.json").resolve()
-
-    text_pair_dataset = TextPairDataset.create(
+    train_dataset = TextPairDataset.create(
         en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
     )
 
-    enc_vocab_size, dec_vocab_size = text_pair_dataset.get_vocab_size()
+    en_val_txt_file_path = Path("../dataset/small_parallel_enja-master/dev.en").resolve()
+    ja_val_txt_file_path = Path("../dataset/small_parallel_enja-master/dev.ja").resolve()
+    valid_dataset = TextPairDataset.create(
+        en_val_txt_file_path, ja_val_txt_file_path, en_word_freqs_path, ja_word_freqs_path
+    )
+
+    enc_vocab_size, dec_vocab_size = train_dataset.get_vocab_size()
     params = {
         "enc_vocab_size": enc_vocab_size,
         "dec_vocab_size": dec_vocab_size,
@@ -122,11 +146,14 @@ if __name__ == "__main__":
         "head_num": 8,
     }
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+
     model, optimizer, scheduler = get_instance(params)
     translation_model_trainer = TranslationModelTrainer(
-        model, optimizer, None, device, text_pair_dataset, None
+        model, optimizer, None, device, train_dataset, valid_dataset
     )
-    loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=15)
+    train_loss_list, valid_loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=15)
 
-    plt.plot(loss_list)
+    plt.plot(train_loss_list)
+    plt.plot(valid_loss_list)
+
     plt.show()
