@@ -1,7 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
 from torch import nn, optim
-import torch.nn.functional as F
 
 
 class TextClassificationModelTrainer:
@@ -32,11 +31,8 @@ class TextClassificationModelTrainer:
                     input_text,
                     input_mask,
                 )
-                t = (
-                    F.one_hot(batch["target"], num_classes=self._train_dataset.get_class_num())
-                    .to(torch.float32)
-                    .to(self._device)
-                )
+                t = batch["target"].to(self._device)
+
                 loss = criterion(y, t)
                 print(loss.item())
                 self._optimizer.zero_grad()
@@ -56,8 +52,8 @@ if __name__ == "__main__":
     from transformer import TransformerClassifier
 
     # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
-    labeled_tokenized_text_pkl_path = Path("ldcc_tokenized_text_list.pkl").resolve()
-    word_freqs_path = Path("ldcc_word_freqs.json").resolve()
+    labeled_tokenized_text_pkl_path = Path("../ldcc_tokenized_text_list.pkl").resolve()
+    word_freqs_path = Path("../ldcc_word_freqs.json").resolve()
 
     text_classification_dataset = TextClassificationDataset.create(
         labeled_tokenized_text_pkl_path, word_freqs_path

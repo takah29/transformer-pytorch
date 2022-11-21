@@ -34,21 +34,21 @@ class TextClassificationDataset(Dataset):
         super().__init__()
 
         self._tokenized_text_list = labeled_tokenized_text["tokenized_text_list"]
-        self._class_num_list = labeled_tokenized_text["class_label_list"]
+        self._class_label_list = labeled_tokenized_text["class_label_list"]
         self._class_name_list = labeled_tokenized_text["class_name_list"]
         self._vocab_data = vocab_data
         self._word_count = word_count
 
         self._text_transform = TextClassificationDataset._get_transform(word_count, vocab_data)
         self._n_data = len(self._tokenized_text_list)
-        self._n_classes = len(self._class_num_list)
+        self._n_classes = len(self._class_name_list)
         self._pad_word_id = vocab_data["<pad>"]
 
     def __getitem__(self, i):
         enc_input = self._tokenized_text_list[i]
         enc_input = self._text_transform([enc_input]).squeeze()
 
-        target = self._class_num_list[i]
+        target = self._class_label_list[i]
 
         data = {
             "input": {
@@ -92,6 +92,7 @@ class TextClassificationDataset(Dataset):
         with labeled_tokenized_text_pkl_path.open("rb") as f:
             labeled_tokenized_text = pickle.load(f)
 
+        print(labeled_tokenized_text["class_name_list"])
         # 1文あたりの単語数
         word_count = 32
 

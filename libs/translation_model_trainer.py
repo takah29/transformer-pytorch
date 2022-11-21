@@ -43,7 +43,6 @@ class TranslationModelTrainer:
         _, self._target_vocab_size = train_dataset.get_vocab_size()
 
     def fit(self, batch_size, num_epoch):
-        print(self._train_dataset.get_pad_id())
         criterion = nn.CrossEntropyLoss(ignore_index=self._train_dataset.get_pad_id()[0])
         train_data_loader = DataLoader(
             self._train_dataset, batch_size=batch_size, shuffle=True, num_workers=4
