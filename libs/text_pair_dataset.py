@@ -13,7 +13,10 @@ def get_tokenized_text_list(file_path):
     tokenized_text_list = []
     with file_path.open("r") as f:
         for line in f:
-            tokenized_text_list.append(line.strip().split())
+            line = line.strip()
+            if line[-2:] != " .":
+                line = line[:-1] + " ."
+                tokenized_text_list.append(line.split())
 
     return tokenized_text_list
 
@@ -100,19 +103,19 @@ class TextPairDataset(Dataset):
         return text_transform
 
     @staticmethod
-    def create(en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path):
+    def create(txt_file_path_1, txt_file_path_2, word_freqs_path_1, word_freqs_path_2):
         # 文章をトークン化してリスト化したデータを作成
-        en_tokenized_text_list = get_tokenized_text_list(en_txt_file_path)
-        ja_tokenized_text_list = get_tokenized_text_list(ja_txt_file_path)
+        tokenized_text_list_1 = get_tokenized_text_list(txt_file_path_1)
+        tokenized_text_list_2 = get_tokenized_text_list(txt_file_path_2)
 
         # 1文あたりの単語数
         word_count = 40
 
-        en_vocab = get_vocab(en_word_freqs_path)
-        ja_vocab = get_vocab(ja_word_freqs_path)
+        vocab_1 = get_vocab(word_freqs_path_1)
+        vocab_2 = get_vocab(word_freqs_path_2)
 
         return TextPairDataset(
-            en_tokenized_text_list, ja_tokenized_text_list, en_vocab, ja_vocab, word_count
+            tokenized_text_list_1, tokenized_text_list_2, vocab_1, vocab_2, word_count
         )
 
 
