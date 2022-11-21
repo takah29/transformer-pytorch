@@ -99,7 +99,6 @@ class TranslationModelTrainer:
             )
             t = batch["dec_target"].to(self._device)
 
-            # print(y.argmax(-1).shape, t.shape)
             loss = self._criterion(y.reshape(-1, y.shape[-1]), t.reshape(-1))
             s += loss.item()
 
