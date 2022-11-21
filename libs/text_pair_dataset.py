@@ -8,15 +8,18 @@ import torchtext.transforms as T
 from torchtext.vocab import vocab
 
 
-def get_tokenized_text_list(file_path):
+def get_tokenized_text_list(file_path, dot_spacing=False):
     """small_parallel_enjaデータセットを単語リスト化したデータを返す"""
     tokenized_text_list = []
     with file_path.open("r") as f:
         for line in f:
             line = line.strip()
-            if line[-2:] != " .":
-                line = line[:-1] + " ."
-                tokenized_text_list.append(line.split())
+
+            if dot_spacing:
+                if line[-2:] != " .":
+                    line = line[:-1] + " ."
+
+            tokenized_text_list.append(line.split())
 
     return tokenized_text_list
 
