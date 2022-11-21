@@ -113,7 +113,8 @@ class PositionalEncoder(nn.Module):
         self.maxlen = maxlen
 
         self.dropout = nn.Dropout(dropout_rate)
-        self.register_buffer("embedding_pos", self._calc_pe(maxlen))
+        emb_pos = self._calc_pe(maxlen)
+        self.register_buffer("embedding_pos", emb_pos)
 
     def _calc_pe(self, maxlen):
         result = []
@@ -277,7 +278,7 @@ class Transformer(nn.Module):
 
 if __name__ == "__main__":
     from pathlib import Path
-    from dataset import TextPairDataset
+    from text_pair_dataset import TextPairDataset
     from torch.utils.data import DataLoader
 
     # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
