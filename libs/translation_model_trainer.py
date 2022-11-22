@@ -94,11 +94,11 @@ class TranslationModelTrainer:
     def _run_epoch(self, data_loader, is_train: bool):
         s = 0.0
         for batch in tqdm(data_loader):
-            # print(i + 1, x.size(), t.size())
             enc_input_text = batch["enc_input"]["text"].to(self._device)
             dec_input_text = batch["dec_input"]["text"].to(self._device)
             enc_input_mask = batch["enc_input"]["mask"].to(self._device)
             dec_input_mask = batch["dec_input"]["mask"].to(self._device)
+            t = batch["dec_target"].to(self._device)
 
             y = self._model(
                 enc_input_text,
@@ -106,8 +106,6 @@ class TranslationModelTrainer:
                 enc_input_mask,
                 dec_input_mask,
             )
-            t = batch["dec_target"].to(self._device)
-
             loss = self._criterion(y.reshape(-1, y.shape[-1]), t.reshape(-1))
             s += loss.item()
 
