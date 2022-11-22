@@ -270,8 +270,8 @@ class Transformer(nn.Module):
                 nn.init.xavier_uniform_(param)
 
     def forward(self, enc_x, dec_x, enc_mask, dec_mask):
-        y = self.encoder(enc_x, enc_mask)
-        y = self.decoder(dec_x, y, dec_mask, enc_mask)
+        enc_y = self.encoder(enc_x, enc_mask)
+        y = self.decoder(dec_x, enc_y, dec_mask, enc_mask)
 
         return y
 
