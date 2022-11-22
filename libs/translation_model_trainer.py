@@ -79,7 +79,8 @@ class TranslationModelTrainer:
 
             if self._valid_dataset is not None:
                 self._model.eval()
-                valid_loss = self._run_epoch(valid_data_loader, is_train=False)
+                with torch.inference_mode():
+                    valid_loss = self._run_epoch(valid_data_loader, is_train=False)
                 valid_loss_list.append(valid_loss)
 
             print(f"train loss: {train_loss}, valid loss: {valid_loss}")
