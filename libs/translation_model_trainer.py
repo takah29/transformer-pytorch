@@ -87,7 +87,10 @@ class TranslationModelTrainer:
 
             if self._save_path:
                 self._save_path.mkdir(exist_ok=True, parents=True)
-                torch.save(self._model.state_dict(), self._save_path / f"snapshot_epoch{i:03}.pth")
+                torch.save(
+                    self._model.to("cpu").state_dict(),
+                    self._save_path / f"snapshot_epoch{i:03}.pth",
+                )
 
         return train_loss_list, valid_loss_list
 
