@@ -275,6 +275,20 @@ class Transformer(nn.Module):
 
         return y
 
+    @staticmethod
+    def create(enc_vocab_size, dec_vocab_size):
+        params = {
+            "enc_vocab_size": enc_vocab_size,
+            "dec_vocab_size": dec_vocab_size,
+            "n_dim": 240,
+            "hidden_dim": 100,
+            "n_enc_blocks": 2,
+            "n_dec_blocks": 2,
+            "head_num": 8,
+            "dropout_rate": 0.1,
+        }
+        return Transformer(**params)
+
 
 if __name__ == "__main__":
     from pathlib import Path
@@ -293,17 +307,7 @@ if __name__ == "__main__":
     data_loader = DataLoader(list(text_pair_dataset)[:10], batch_size=2, shuffle=True)
 
     enc_vocab_size, dec_vocab_size = text_pair_dataset.get_vocab_size()
-    params = {
-        "enc_vocab_size": enc_vocab_size,
-        "dec_vocab_size": dec_vocab_size,
-        "n_dim": 64,
-        "hidden_dim": 32,
-        "n_enc_blocks": 1,
-        "n_dec_blocks": 1,
-        "head_num": 1,
-        "dropout_rate": 0.1,
-    }
-    transformer = Transformer(**params)
+    transformer = Transformer.create(enc_vocab_size, dec_vocab_size)
 
     for i, batch in enumerate(data_loader):
         print("iter:", i + 1)
