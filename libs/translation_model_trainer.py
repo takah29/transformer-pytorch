@@ -122,7 +122,7 @@ class TranslationModelTrainer:
                 if self._lr_scheduler is not None:
                     self._lr_scheduler.step()
 
-        return s / len(data_loader.dataset)
+        return s / len(data_loader)
 
 
 def get_instance(params):
