@@ -53,9 +53,9 @@ def main():
         model_path = model_dir_path.glob("*.pth")[-1]
 
     # 単語頻度ファイルのパス
-    word_freqs_dir = base_path / "word_freqs"
-    enc_word_freqs_path = word_freqs_dir / "enc_word_freqs.json"
-    dec_word_freqs_path = word_freqs_dir / "dec_word_freqs.json"
+    word_freqs_dir = base_path / "./small_parallel_enja_dataset"
+    enc_word_freqs_path = word_freqs_dir / "en_word_freqs.json"
+    dec_word_freqs_path = word_freqs_dir / "ja_word_freqs.json"
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     predictor, enc_text_encoder, dec_text_encoder = create_instance(
