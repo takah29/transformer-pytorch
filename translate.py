@@ -27,6 +27,21 @@ def create_instance(model_path: Path, enc_word_freqs_path: Path, dec_word_freqs_
     return predictor, enc_text_encoder, dec_text_encoder
 
 
+def translate(text: str, predictor, enc_text_encoder, bos_id, eos_id, dec_text_encoder, device):
+    encoded_text = enc_text_encoder.encode(text)
+    input_text = torch.tensor(
+        [bos_id] + encoded_text + [eos_id],
+        dtype=torch.long,
+    ).to(device)
+
+    input_mask = torch.zeros(input_text.shape, dtype=torch.bool).to(device)
+
+    output = predictor.predict(input_text, input_mask)
+    translated_text = dec_text_encoder.decode(list(output)[1:-1], sep=" ")
+
+    return translated_text
+
+
 def main():
     base_path = Path(__file__).resolve().parent
 
