@@ -1,15 +1,14 @@
 from pathlib import Path
-from shutil import unpack_archive
 from urllib.request import urlretrieve
 from collections import Counter, OrderedDict
 import json
 import itertools
 from subprocess import run
 
-from libs.text_pair_dataset import get_tokenized_text_list
+from libs.text_encoder import get_tokenized_text_list
 
 
-def get_datasets(train_file_path: Path, val_file_path:Path, lang="en"):
+def get_datasets(train_file_path: Path, val_file_path: Path, lang="en"):
     train_tokenized_texts = get_tokenized_text_list(train_file_path, lang)
     val_tokenized_texts = get_tokenized_text_list(val_file_path, lang)
     counter = Counter(list(itertools.chain.from_iterable(train_tokenized_texts)))
@@ -17,11 +16,9 @@ def get_datasets(train_file_path: Path, val_file_path:Path, lang="en"):
     results = {
         "train_texts": train_tokenized_texts,
         "val_texts": val_tokenized_texts,
-        "word_freqs": OrderedDict(sorted(counter.items(), key=lambda x: x[1], reverse=True))
+        "word_freqs": OrderedDict(sorted(counter.items(), key=lambda x: x[1], reverse=True)),
     }
     return results
-
-
 
 
 def main():
@@ -43,8 +40,7 @@ def main():
         cmd = ["gzip", "-d", zip_path]
         run(cmd)
 
-    # 単語ID辞書をjson形式で保存する
-    print("create encoder files...")
+    print("create de files...")
     results = get_datasets(base_path / "train.de", base_path / "val.de", lang="de")
 
     with (base_path / "de_train_texts.txt").open("w") as f:
@@ -58,7 +54,7 @@ def main():
     with (base_path / "de_word_freqs.json").open("w") as f:
         json.dump(results["word_freqs"], f, indent=2, ensure_ascii=False)
 
-    print("create decoder files...")
+    print("create en files...")
     results = get_datasets(base_path / "train.en", base_path / "val.en", lang="en")
 
     with (base_path / "en_train_texts.txt").open("w") as f:
