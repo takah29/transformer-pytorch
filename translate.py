@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import torch
@@ -63,18 +64,14 @@ def main():
     bos_id = enc_text_encoder.get_bos_id()
     eos_id = enc_text_encoder.get_eos_id()
 
-    text = "Eine Gruppe von Menschen steht vor einem Iglu ."
-    encoded_text = enc_text_encoder.encode(text)
-    input_text = torch.tensor(
-        [bos_id] + encoded_text + [eos_id],
-        dtype=torch.long,
-    ).to(device)
-
-    input_mask = torch.zeros(input_text.shape, dtype=torch.bool).to(device)
-
-    # print(input_text, input_mask)
-    output = predictor.predict(input_text, input_mask)
-    print(dec_text_encoder.decode(list(output), sep=" "))
+    while True:
+        print("text: ", end="")
+        text = input().strip()
+        translated_text = translate(
+            text, predictor, enc_text_encoder, bos_id, eos_id, dec_text_encoder, device
+        )
+        print(text)
+        print(f"   -> {translated_text}")
 
 
 if __name__ == "__main__":
