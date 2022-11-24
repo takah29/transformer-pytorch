@@ -19,20 +19,20 @@ def get_instance(params):
 
 def main():
     # 事前にbuild_multi30k_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
-    base_path = Path("./multi30k_dataset").resolve()
+    base_path = Path("./small_parallel_enja_dataset").resolve()
 
     # 学習データセット作成
-    de_txt_file_path = base_path / "de_train_texts.txt"
-    en_txt_file_path = base_path / "en_train_texts.txt"
-    de_word_freqs_path = base_path / "de_word_freqs.json"
-    en_word_freqs_path = base_path / "en_word_freqs.json"
+    de_txt_file_path = base_path / "en_train_texts.txt"
+    en_txt_file_path = base_path / "ja_train_texts.txt"
+    de_word_freqs_path = base_path / "en_word_freqs.json"
+    en_word_freqs_path = base_path / "ja_word_freqs.json"
     train_dataset = TextPairDataset.create(
         de_txt_file_path, en_txt_file_path, de_word_freqs_path, en_word_freqs_path
     )
 
     # 検証データセット作成
-    de_val_txt_file_path = base_path / "de_val_texts.txt"
-    en_val_txt_file_path = base_path / "en_val_texts.txt"
+    de_val_txt_file_path = base_path / "en_val_texts.txt"
+    en_val_txt_file_path = base_path / "ja_val_texts.txt"
     valid_dataset = TextPairDataset.create(
         de_val_txt_file_path, en_val_txt_file_path, de_word_freqs_path, en_word_freqs_path
     )
