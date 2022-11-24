@@ -137,7 +137,7 @@ class TransformerEncoderBlock(nn.Module):
     def __init__(self, n_dim, hidden_dim, head_num, dropout_rate=0.1):
         super().__init__()
 
-        self.attention = MultiheadAttention(n_dim, head_num)
+        self.attention = MultiheadAttention(n_dim, head_num, dropout_rate)
         self.dropout1 = nn.Dropout(dropout_rate)
         self.norm1 = nn.LayerNorm((n_dim))
         self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
@@ -163,8 +163,10 @@ class TransformerEncoder(nn.Module):
             [TransformerEncoderBlock(n_dim, hidden_dim, head_num) for _ in range(n_enc_blocks)]
         )
 
+        self.sqrt_embedding_size = n_dim**0.5
+
     def forward(self, x, src_mask=None):
-        y = self.embedding(x)
+        y = self.embedding(x) * self.sqrt_embedding_size
         y = self.positional_encoder(y)
 
         for enc_block in self.enc_blocks:
@@ -177,10 +179,10 @@ class TransformerDecoderBlock(nn.Module):
     def __init__(self, n_dim, hidden_dim, head_num, dropout_rate=0.1):
         super().__init__()
 
-        self.masked_attention = MultiheadAttention(n_dim, head_num, masking=True)
+        self.masked_attention = MultiheadAttention(n_dim, head_num, dropout_rate)
         self.dropout1 = nn.Dropout(dropout_rate)
         self.norm1 = nn.LayerNorm((n_dim))
-        self.attention = MultiheadAttention(n_dim, head_num)
+        self.attention = MultiheadAttention(n_dim, head_num, dropout_rate)
         self.dropout2 = nn.Dropout(dropout_rate)
         self.norm2 = nn.LayerNorm((n_dim))
         self.feedforward = FeedForwardNetwork(n_dim, hidden_dim)
@@ -209,8 +211,10 @@ class TransformerDecoder(nn.Module):
         )
         self.out_linear = nn.Linear(n_dim, vocab_size)
 
+        self.sqrt_embedding_size = n_dim**0.5
+
     def forward(self, x, z, x_mask=None, z_mask=None):
-        y = self.embedding(x)
+        y = self.embedding(x) * self.sqrt_embedding_size
         y = self.pe(y)
 
         for dec_block in self.dec_blocks:
