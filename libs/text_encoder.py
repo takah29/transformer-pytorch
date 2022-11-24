@@ -45,6 +45,12 @@ class TextEncoder:
         self._tokenizer = tokenizer
         self._vocab = vocab
 
+    def get_bos_id(self):
+        return self._vocab["<bos>"]
+
+    def get_eos_id(self):
+        return self._vocab["<eos>"]
+
     def encode(self, text: str):
         tokenized_text = self._tokenizer(text)
         return self._vocab.lookup_indices(tokenized_text)
