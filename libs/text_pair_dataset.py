@@ -90,7 +90,7 @@ class TextPairDataset(Dataset):
 
     @staticmethod
     def _get_padding_mask(x, pad_id):
-        return (x != pad_id).to(torch.uint8)  # (token_size, )
+        return (x == pad_id).to(torch.bool)  # (token_size, )
 
     @staticmethod
     def _get_transform(word_count, vocab_data):
