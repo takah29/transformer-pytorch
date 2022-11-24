@@ -187,7 +187,7 @@ class TransformerDecoderBlock(nn.Module):
         self.norm3 = nn.LayerNorm((n_dim))
 
     def forward(self, x, z, x_mask=None, z_mask=None):
-        attn_mask = MultiheadAttention._subsequent_mask2(x.shape[1])
+        attn_mask = MultiheadAttention._subsequent_mask(x.shape[1])
         attn_mask = attn_mask.to(x.device)
         y = x + self.dropout1(self.masked_attention(x, x, x2_mask=x_mask, attn_mask=attn_mask))
         y = self.norm1(y)
