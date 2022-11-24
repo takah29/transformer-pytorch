@@ -80,7 +80,7 @@ class TextPairDataset(Dataset):
     def _get_transform(word_count, vocab_data):
         text_transform = T.Sequential(
             T.VocabTransform(vocab_data),  # トークンに変換
-            T.Truncate(word_count - 2),  # word_countを超過したデータを切り捨てる
+            T.Truncate(word_count - 2),  # word_count - 2 を超過したデータを切り捨てる
             T.AddToken(token=vocab_data["<bos>"], begin=True),  # 先頭に'<bos>追加
             T.AddToken(token=vocab_data["<eos>"], begin=False),  # 終端に'<eos>'追加
             T.ToTensor(),  # テンソルに変換
@@ -117,8 +117,8 @@ if __name__ == "__main__":
     def test1():
         # 事前にbuild_small_parallel_enja_word_freqs.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
         print("text_pair_dataset test")
-        en_txt_file_path = Path("../dataset/small_parallel_enja-master/dev.en").resolve()
-        ja_txt_file_path = Path("../dataset/small_parallel_enja-master/dev.ja").resolve()
+        en_txt_file_path = Path("../multi30k_dataset/enc_tokenized_texts.txt").resolve()
+        ja_txt_file_path = Path("../multi30k_dataset/dec_tokenized_texts.txt").resolve()
         en_word_freqs_path = Path("../word_freqs_en.json").resolve()
         ja_word_freqs_path = Path("../word_freqs_ja.json").resolve()
 
