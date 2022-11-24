@@ -4,7 +4,7 @@ from torch.nn import functional as F
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, n_dim, head_num, masking=False, dropout_rate=0.1):
+    def __init__(self, n_dim, head_num, dropout_rate=0.1):
         # 実装の簡易化のため次元をヘッド数で割り切れるかチェックする
         if n_dim % head_num != 0:
             raise ValueError("n_dim % head_num is not 0.")
@@ -13,7 +13,6 @@ class MultiheadAttention(nn.Module):
 
         self.n_dim = n_dim
         self.head_num = head_num
-        self.masking = masking
 
         self.head_dim = n_dim // head_num
         self.sqrt_head_dim = self.head_dim**0.5
@@ -24,7 +23,7 @@ class MultiheadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.out_linear = nn.Linear(n_dim, n_dim)
 
-    def forward(self, x1, x2, x2_mask=None):
+    def forward(self, x1, x2, x2_mask=None, attn_mask=None):
         batch_size, x1_seq_size, _ = x1.size()  # seq_sizeはtoken_sizeと同じ
         _, x2_seq_size, _ = x2.size()
 
@@ -58,19 +57,17 @@ class MultiheadAttention(nn.Module):
 
             # (batch, head_num, x1_seq_size, x2_seq_size) * (batch, 1, 1, x2_seq_size)
             # -> (batch, head_num, x1_seq_size, x2_seq_size)
-            dots = dots * x2_mask
+            dots *= torch.logical_not(x2_mask)
 
         # 後続情報にマスクを適用する
-        if self.masking:
+        if attn_mask is not None:
             assert x1_seq_size == x2_seq_size  # self-attentionを仮定しているのでサイズが同じでないといけない
+            dots[:, :, attn_mask] = float("-inf")
 
-            # (batch, head_num, x1_seq_size, x1_seq_size) * (1, x1_seq_size, x1_seq_size)
-            # -> (batch, head_num, x1_seq_size, x1_seq_size)
-            dots = dots * MultiheadAttention._subsequent_mask(x1_seq_size).to(dots.device)
+        attention_weight = self.dropout(F.softmax(dots, dim=-1))
 
         # (batch, head_num, x1_seq_size, x2_seq_size) @ (batch, head_num, x2_seq_size, head_dim)
         # -> (batch, head_num, x1_seq_size, head_dim)
-        attention_weight = self.dropout(F.softmax(dots, dim=-1))
         attention = attention_weight @ v
 
         # (batch, head_num, x1_seq_size, head_dim) -> (batch, x1_seq_size, n_dim)
@@ -82,11 +79,11 @@ class MultiheadAttention(nn.Module):
 
     @staticmethod
     def _subsequent_mask(size):
-        attention_shape = (1, size, size)
+        attention_shape = (size, size)
         # 三角行列の生成
-        subsequent_mask = torch.triu(torch.ones(attention_shape), diagonal=1).to(torch.uint8)
+        subsequent_mask = torch.triu(torch.ones(attention_shape), diagonal=1).to(torch.bool)
 
-        return subsequent_mask == 0  # 1と0を反転
+        return subsequent_mask
 
 
 class FeedForwardNetwork(nn.Module):
@@ -190,7 +187,9 @@ class TransformerDecoderBlock(nn.Module):
         self.norm3 = nn.LayerNorm((n_dim))
 
     def forward(self, x, z, x_mask=None, z_mask=None):
-        y = x + self.dropout1(self.masked_attention(x, x, x_mask))
+        attn_mask = MultiheadAttention._subsequent_mask2(x.shape[1])
+        attn_mask = attn_mask.to(x.device)
+        y = x + self.dropout1(self.masked_attention(x, x, x2_mask=x_mask, attn_mask=attn_mask))
         y = self.norm1(y)
         y = y + self.dropout2(self.attention(y, z, z_mask))
         y = self.norm2(y)
