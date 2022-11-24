@@ -18,23 +18,23 @@ def get_instance(params):
 
 
 def main():
-    # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
-    base_path = Path("./small_parallel_enja_dataset").resolve()
+    # 事前にbuild_multi30k_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
+    base_path = Path("./multi30k_dataset").resolve()
 
     # 学習データセット作成
-    en_txt_file_path = base_path / "small_parallel_enja-master" / "train.en"
-    ja_txt_file_path = base_path / "small_parallel_enja-master" / "train.ja"
-    en_word_freqs_path = base_path / "word_freqs_en.json"
-    ja_word_freqs_path = base_path / "word_freqs_ja.json"
+    de_txt_file_path = base_path / "de_train_texts.txt"
+    en_txt_file_path = base_path / "en_train_texts.txt"
+    de_word_freqs_path = base_path / "de_word_freqs.json"
+    en_word_freqs_path = base_path / "en_word_freqs.json"
     train_dataset = TextPairDataset.create(
-        en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
+        de_txt_file_path, en_txt_file_path, de_word_freqs_path, en_word_freqs_path
     )
 
     # 検証データセット作成
-    en_val_txt_file_path = base_path / "small_parallel_enja-master" / "dev.en"
-    ja_val_txt_file_path = base_path / "small_parallel_enja-master" / "dev.ja"
+    de_val_txt_file_path = base_path / "de_val_texts.txt"
+    en_val_txt_file_path = base_path / "en_val_texts.txt"
     valid_dataset = TextPairDataset.create(
-        en_val_txt_file_path, ja_val_txt_file_path, en_word_freqs_path, ja_word_freqs_path
+        de_val_txt_file_path, en_val_txt_file_path, de_word_freqs_path, en_word_freqs_path
     )
 
     # ネットワークパラメータ定義
@@ -63,7 +63,7 @@ def main():
     translation_model_trainer = TranslationModelTrainer(
         model, optimizer, None, device, train_dataset, valid_dataset, save_path
     )
-    train_loss_list, valid_loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=2)
+    train_loss_list, valid_loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=20)
 
     # Lossをcsvファイルに保存
     with (save_path / "loss.csv").open("w") as f:
