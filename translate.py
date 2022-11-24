@@ -1,10 +1,9 @@
 from pathlib import Path
 
 import torch
-from torchtext.data.utils import get_tokenizer
 
 from libs.text_pair_dataset import get_vocab
-from libs.text_encoder import TextEncoder
+from libs.text_encoder import TextEncoder, create_tokenizer
 from libs.transformer import Transformer
 from libs.transformer_predictor import TransformerPredictor
 
@@ -18,10 +17,10 @@ def create_instance(model_path: Path, enc_word_freqs_path: Path, dec_word_freqs_
 
     predictor = TransformerPredictor(transformer, dec_vocab["<bos>"], dec_vocab["<eos>"])
 
-    enc_tokenizer = get_tokenizer("spacy", language="de_core_news_sm")
+    enc_tokenizer = create_tokenizer(lang="en")
     enc_text_encoder = TextEncoder(enc_tokenizer, enc_vocab)
 
-    dec_tokenizer = get_tokenizer("spacy", language="en_core_web_sm")
+    dec_tokenizer = create_tokenizer(lang="ja")
     dec_text_encoder = TextEncoder(dec_tokenizer, dec_vocab)
 
     return predictor, enc_text_encoder, dec_text_encoder
