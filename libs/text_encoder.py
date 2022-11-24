@@ -6,14 +6,23 @@ from torchtext.vocab import Vocab
 from torchtext.data.utils import get_tokenizer
 
 
-def get_tokenized_text_list(file_path, lang="en"):
+def create_tokenizer(lang):
     if lang == "en":
         tokenizer = get_tokenizer("spacy", language="en_core_web_sm")
     elif lang == "de":
         tokenizer = get_tokenizer("spacy", language="de_core_news_sm")
+    elif lang == "ja":
+        tokenizer = JapaneseTokenizer()
+    elif lang == "spaced":
+        tokenizer = SpacedTextTokenizer()
     else:
         raise NotImplementedError
 
+    return tokenizer
+
+
+def get_tokenized_text_list(file_path, lang="en"):
+    tokenizer = create_tokenizer(lang)
     tokenized_text_list = []
     with file_path.open("r") as f:
         for line in f:
