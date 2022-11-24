@@ -9,11 +9,19 @@ from subprocess import run
 from libs.text_pair_dataset import get_tokenized_text_list
 
 
-def create_word_freqs(file_path: Path) -> dict:
-    tokenized_text_list = get_tokenized_text_list(file_path, dot_spacing=True)
-    counter = Counter(list(itertools.chain.from_iterable(tokenized_text_list)))
+def get_datasets(train_file_path: Path, val_file_path:Path, lang="en"):
+    train_tokenized_texts = get_tokenized_text_list(train_file_path, lang)
+    val_tokenized_texts = get_tokenized_text_list(val_file_path, lang)
+    counter = Counter(list(itertools.chain.from_iterable(train_tokenized_texts)))
 
-    return OrderedDict(sorted(counter.items(), key=lambda x: x[1], reverse=True))
+    results = {
+        "train_texts": train_tokenized_texts,
+        "val_texts": val_tokenized_texts,
+        "word_freqs": OrderedDict(sorted(counter.items(), key=lambda x: x[1], reverse=True))
+    }
+    return results
+
+
 
 
 def main():
@@ -36,14 +44,33 @@ def main():
         run(cmd)
 
     # 単語ID辞書をjson形式で保存する
-    print("create word frequency file...")
-    word_freqs_de = create_word_freqs(base_path / "train.de")
-    with (base_path / "word_freqs_de.json").open("w") as f:
-        json.dump(word_freqs_de, f, indent=2, ensure_ascii=False)
+    print("create encoder files...")
+    results = get_datasets(base_path / "train.de", base_path / "val.de", lang="de")
 
-    word_freqs_en = create_word_freqs(base_path / "train.en")
-    with (base_path / "word_freqs_en.json").open("w") as f:
-        json.dump(word_freqs_en, f, indent=2, ensure_ascii=False)
+    with (base_path / "de_train_texts.txt").open("w") as f:
+        for tokenized_text in results["train_texts"]:
+            f.write(" ".join(tokenized_text) + "\n")
+
+    with (base_path / "de_val_texts.txt").open("w") as f:
+        for tokenized_text in results["val_texts"]:
+            f.write(" ".join(tokenized_text) + "\n")
+
+    with (base_path / "de_word_freqs.json").open("w") as f:
+        json.dump(results["word_freqs"], f, indent=2, ensure_ascii=False)
+
+    print("create decoder files...")
+    results = get_datasets(base_path / "train.en", base_path / "val.en", lang="en")
+
+    with (base_path / "en_train_texts.txt").open("w") as f:
+        for tokenized_text in results["train_texts"]:
+            f.write(" ".join(tokenized_text) + "\n")
+
+    with (base_path / "en_val_texts.txt").open("w") as f:
+        for tokenized_text in results["val_texts"]:
+            f.write(" ".join(tokenized_text) + "\n")
+
+    with (base_path / "en_word_freqs.json").open("w") as f:
+        json.dump(results["word_freqs"], f, indent=2, ensure_ascii=False)
 
     print("done.")
 
