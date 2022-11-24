@@ -8,22 +8,6 @@ import torchtext.transforms as T
 from torchtext.vocab import vocab
 
 
-def get_tokenized_text_list(file_path, dot_spacing=False):
-    """small_parallel_enjaデータセットを単語リスト化したデータを返す"""
-    tokenized_text_list = []
-    with file_path.open("r") as f:
-        for line in f:
-            line = line.strip()
-
-            if dot_spacing:
-                if line[-2:] != " .":
-                    line = line[:-1] + " ."
-
-            tokenized_text_list.append(line.split())
-
-    return tokenized_text_list
-
-
 def get_vocab(word_freqs_file_path):
     with open(word_freqs_file_path, "r") as f:
         word_freqs_dict = json.load(f, object_pairs_hook=OrderedDict)
@@ -108,8 +92,14 @@ class TextPairDataset(Dataset):
     @staticmethod
     def create(txt_file_path_1, txt_file_path_2, word_freqs_path_1, word_freqs_path_2):
         # 文章をトークン化してリスト化したデータを作成
-        tokenized_text_list_1 = get_tokenized_text_list(txt_file_path_1)
-        tokenized_text_list_2 = get_tokenized_text_list(txt_file_path_2)
+        tokenized_text_list_1 = []
+        with txt_file_path_1.open("r") as f:
+            for line in f:
+                tokenized_text_list_1.append(line.strip().split())
+        tokenized_text_list_2 = []
+        with txt_file_path_2.open("r") as f:
+            for line in f:
+                tokenized_text_list_2.append(line.strip().split())
 
         # 1文あたりの単語数
         word_count = 40
