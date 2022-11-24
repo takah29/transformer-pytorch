@@ -24,7 +24,7 @@ def get_tokenized_text_list(file_path, lang="en"):
 
 
 class SpacedTextTokenizer:
-    def tokenize(self, text: str):
+    def __call__(self, text: str):
         return text.strip().split()
 
 
@@ -32,7 +32,7 @@ class JapaneseTokenizer:
     def __init__(self):
         self._tokenizer = Tokenizer()
 
-    def tokenize(self, text: str):
+    def __call__(self, text: str):
         return list(self._tokenizer.tokenize(text, wakati=True))
 
 
@@ -63,15 +63,15 @@ class TextEncoder:
 if __name__ == "__main__":
     from text_pair_dataset import get_vocab
 
-    ja_word_freqs_path = Path("../word_freqs/dec_word_freqs.json").resolve()
+    ja_word_freqs_path = Path("../multi30k_dataset/en_word_freqs.json").resolve()
     vocab = get_vocab(ja_word_freqs_path)
-    text_encoder = TextEncoder(JapaneseTokenizer(), vocab)
+    text_encoder = TextEncoder(get_tokenizer("spacy", language="en_core_web_sm"), vocab)
 
-    text = "お腹が痛いので遅れます。"
+    text = "A man lays on the bench to which a white dog is also tied ."
     print("text:", text)
 
     encoded_text = text_encoder.encode(text)
     print("encoded_text:", encoded_text)
 
-    decoded_text = text_encoder.decode(encoded_text)
+    decoded_text = text_encoder.decode(encoded_text, sep=" ")
     print("decoded_text:", decoded_text)
