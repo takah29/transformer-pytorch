@@ -3,10 +3,17 @@ from typing import List
 
 from janome.tokenizer import Tokenizer
 from torchtext.vocab import Vocab
+from torchtext.data.utils import get_tokenizer
 
 
-def get_tokenized_text_list(file_path):
-    tokenizer = EnglishTokenizer()
+def get_tokenized_text_list(file_path, lang="en"):
+    if lang == "en":
+        tokenizer = get_tokenizer("spacy", language="en_core_web_sm")
+    elif lang == "de":
+        tokenizer = get_tokenizer("spacy", language="de_core_news_sm")
+    else:
+        raise NotImplementedError
+
     tokenized_text_list = []
     with file_path.open("r") as f:
         for line in f:
@@ -16,16 +23,9 @@ def get_tokenized_text_list(file_path):
     return tokenized_text_list
 
 
-class SepalatedTextTokenizer:
+class SpacedTextTokenizer:
     def tokenize(self, text: str):
         return text.strip().split()
-
-
-class EnglishTokenizer:
-    def tokenize(self, text: str):
-        if text[-1] == "." and text[-2] != " ":
-            text = text[:-1] + " ."
-        return text.split()
 
 
 class JapaneseTokenizer:
@@ -46,7 +46,7 @@ class TextEncoder:
         self._vocab = vocab
 
     def encode(self, text: str):
-        tokenized_text = self._tokenizer.tokenize(text)
+        tokenized_text = self._tokenizer(text)
         return self._vocab.lookup_indices(tokenized_text)
 
     def decode(self, id_list: List[int], sep=""):
