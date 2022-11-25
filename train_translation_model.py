@@ -67,7 +67,7 @@ def main():
 
     # Lossをcsvファイルに保存
     with (save_path / "loss.csv").open("w") as f:
-        header = ["train_loss", "valid_loss"]
+        header = ["epoch", "train_loss", "valid_loss"]
         csv_writer = csv.writer(f)
         csv_writer.writerow(header)
         for epoch, row in enumerate(zip(train_loss_list, valid_loss_list), start=1):
