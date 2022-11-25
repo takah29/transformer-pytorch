@@ -67,6 +67,8 @@ def main():
     while True:
         print("text: ", end="")
         text = input().strip()
+        if text == "":
+            continue
         translated_text = translate(
             text, predictor, enc_text_encoder, bos_id, eos_id, dec_text_encoder, device
         )
