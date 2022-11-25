@@ -9,8 +9,8 @@ from libs.transformer import Transformer
 from libs.translation_model_trainer import TranslationModelTrainer
 
 
-def get_instance(params):
-    transformer = Transformer(**params)
+def get_instance(enc_vocab_size, dec_vocab_size):
+    transformer = Transformer.create(enc_vocab_size, dec_vocab_size)
     # optimizer = optim.Adam(transformer.parameters(), lr=0.0, betas=(0.9, 0.98), eps=10e-9)
     optimizer = optim.Adam(transformer.parameters())
 
@@ -39,22 +39,12 @@ def main():
 
     # ネットワークパラメータ定義
     enc_vocab_size, dec_vocab_size = train_dataset.get_vocab_size()
-    params = {
-        "enc_vocab_size": enc_vocab_size,
-        "dec_vocab_size": dec_vocab_size,
-        "n_dim": 240,
-        "hidden_dim": 100,
-        "n_enc_blocks": 2,
-        "n_dec_blocks": 2,
-        "head_num": 8,
-        "dropout_rate": 0.1,
-    }
 
     # GPUが使える場合は使う
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
     # インスタンス作成
-    model, optimizer = get_instance(params)
+    model, optimizer = get_instance(enc_vocab_size, dec_vocab_size)
 
     # モデル保存パス
     save_path = Path(__file__).resolve().parent / "models"
