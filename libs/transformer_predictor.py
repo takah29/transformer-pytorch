@@ -2,14 +2,14 @@ import torch
 
 
 class TransformerGreedyPredictor:
-    def __init__(self, transformer, bos_id, eos_id, maxlen=100):
+    def __init__(self, transformer, bos_id: int, eos_id: int, maxlen: int = 100):
         self._transformer = transformer
         self._bos_id = bos_id
         self._eos_id = eos_id
         self._maxlen = maxlen
 
     @torch.inference_mode()
-    def predict(self, enc_x):
+    def predict(self, enc_x: torch.Tensor) -> torch.Tensor:
         """Greedy Decoding"""
 
         self._transformer.eval()
@@ -52,16 +52,24 @@ class TransformerGreedyPredictor:
 
 
 class TransformerBeamSearchPredictor:
-    def __init__(self, transformer, bos_id, eos_id, maxlen=100, beam_size=20, alpha=0.6):
+    def __init__(
+        self,
+        transformer,
+        bos_id: int,
+        eos_id: int,
+        maxlen: int = 100,
+        beam_size: int = 1000,
+        alpha: float = 1.6,
+    ):
         self._transformer = transformer
         self._bos_id = bos_id
         self._eos_id = eos_id
         self._maxlen = maxlen
         self._k = beam_size
-        self._alpha = alpha
+        self._alpha = alpha  # alpha > 0 なら出力が長くなり、alpha < 0 なら出力が短くなる
 
     @torch.inference_mode()
-    def predict(self, enc_x):
+    def predict(self, enc_x: torch.Tensor) -> torch.Tensor:
         """Beam Search Decoding"""
 
         self._transformer.eval()
