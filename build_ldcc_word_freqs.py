@@ -6,7 +6,7 @@ import json
 import itertools
 import pickle
 
-from janome.tokenizer import Tokenizer
+from libs.text_encoder import create_tokenizer
 
 
 def get_ldcc_labeled_tokenized_text_list(base_dir_path):
@@ -24,8 +24,8 @@ def get_ldcc_labeled_tokenized_text_list(base_dir_path):
         "sports-watch",
     ]
 
-    tokenizer = Tokenizer()
-    data = {"tokenized_text_list": [], "class_label_list": [], "class_name_list": dir_names}
+    tokenizer = create_tokenizer(lang="ja")
+    results = {"tokenized_text_list": [], "class_label_list": [], "class_name_list": dir_names}
     for class_num, dir_name in enumerate(dir_names):
         dir_path = base_dir_path / dir_name
         print("process of", dir_path.name)
@@ -38,11 +38,11 @@ def get_ldcc_labeled_tokenized_text_list(base_dir_path):
             for line in lines[2:]:  # 最初の2行はスキップ
                 if line == "":
                     continue
-                tokenized_text = tokenizer.tokenize(line, wakati=True)
-                data["tokenized_text_list"].append(list(tokenized_text))
-                data["class_label_list"].append(class_num)
+                tokenized_text = tokenizer(line)
+                results["tokenized_text_list"].append(list(tokenized_text))
+                results["class_label_list"].append(class_num)
 
-    return data
+    return results
 
 
 def create_word_freqs(tokenized_text_list) -> dict:
@@ -55,7 +55,9 @@ def main():
     # データセットのアドレスと保存ファイル名
     url = "https://www.rondhuit.com/download/ldcc-20140209.tar.gz"
     file_name = "ldcc-20140209.tar.gz"
-    base_path = Path(__file__).resolve().parent
+    base_path = Path(__file__).resolve().parent / "ldcc_dataset"
+    base_path.mkdir(exist_ok=True, parents=True)
+
     archive_path = base_path / file_name
 
     # 存在しない場合にファイルをダウンロードする
@@ -65,13 +67,12 @@ def main():
 
     # 圧縮ファイルを展開する
     print(f"expand {file_name}")
-    unpack_archive(archive_path, base_path / "dataset", format="gztar")
-    dataset_path = base_path / "dataset"
+    unpack_archive(archive_path, base_path, format="gztar")
 
     # 単語ID辞書をjson形式で保存する
     print("create word frequency file...")
-    labeled_tokenized_text_list = get_ldcc_labeled_tokenized_text_list(dataset_path / "text")
-    with open("ldcc_tokenized_text_list.pkl", "wb") as f:
+    labeled_tokenized_text_list = get_ldcc_labeled_tokenized_text_list(base_path / "text")
+    with (base_path / "ldcc_tokenized_text_list.pkl").open("wb") as f:
         pickle.dump(labeled_tokenized_text_list, f)
 
     word_freqs = create_word_freqs(labeled_tokenized_text_list["tokenized_text_list"])
