@@ -30,12 +30,15 @@ class TransformerLRScheduler(_LRScheduler):
     def step(self):
         self._steps += 1
 
-        self.lr = self._n_dim * min(
-            self._steps ** (-0.5), self._steps * self._warmup_steps ** (-1.5)
-        )
+        self.lr = self.calc_lr()
         self.set_lr(self.optimizer, self.lr)
 
         return self.lr
+
+    def calc_lr(self):
+        return self._n_dim ** (-0.5) * min(
+            self._steps ** (-0.5), self._steps * self._warmup_steps ** (-1.5)
+        )
 
     @staticmethod
     def set_lr(optimizer, lr):
