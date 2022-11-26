@@ -6,15 +6,16 @@ from torch import optim
 
 from libs.text_pair_dataset import TextPairDataset
 from libs.transformer import Transformer
-from libs.translation_model_trainer import TranslationModelTrainer
+from libs.translation_model_trainer import TranslationModelTrainer, TransformerLRScheduler
 
 
 def get_instance(enc_vocab_size, dec_vocab_size):
     transformer = Transformer.create(enc_vocab_size, dec_vocab_size)
-    # optimizer = optim.Adam(transformer.parameters(), lr=0.0, betas=(0.9, 0.98), eps=10e-9)
-    optimizer = optim.Adam(transformer.parameters())
+    optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-9)
+    #optimizer = optim.Adam(transformer.parameters())
+    lr_scheduler = TransformerLRScheduler(optimizer, transformer.n_dim, warmup_steps=4000)
 
-    return transformer, optimizer
+    return transformer, optimizer, lr_scheduler
 
 
 def main():
@@ -44,14 +45,14 @@ def main():
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
     # インスタンス作成
-    model, optimizer = get_instance(enc_vocab_size, dec_vocab_size)
+    model, optimizer, lr_scheduler = get_instance(enc_vocab_size, dec_vocab_size)
 
     # モデル保存パス
     save_path = Path(__file__).resolve().parent / "models"
 
     # Trainerの作成と学習の実行
     translation_model_trainer = TranslationModelTrainer(
-        model, optimizer, None, device, train_dataset, valid_dataset, save_path
+        model, optimizer, lr_scheduler, device, train_dataset, valid_dataset, save_path
     )
     train_loss_list, valid_loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=20)
 
