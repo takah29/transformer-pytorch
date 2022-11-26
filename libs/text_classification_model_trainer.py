@@ -51,9 +51,10 @@ if __name__ == "__main__":
     from text_classification_dataset import TextClassificationDataset
     from transformer import TransformerClassifier
 
-    # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
-    labeled_tokenized_text_pkl_path = Path("../ldcc_tokenized_text_list.pkl").resolve()
-    word_freqs_path = Path("../ldcc_word_freqs.json").resolve()
+    # 事前にbuild_ldcc_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
+    base_path = Path(__file__).resolve().parents[1] / "ldcc_dataset"
+    labeled_tokenized_text_pkl_path = base_path / "ldcc_tokenized_text_list.pkl"
+    word_freqs_path = base_path / "ldcc_word_freqs.json"
 
     text_classification_dataset = TextClassificationDataset.create(
         labeled_tokenized_text_pkl_path, word_freqs_path
@@ -76,6 +77,3 @@ if __name__ == "__main__":
         transformer_classifier, optim.Adam, device, text_classification_dataset, None, 1.7e-3
     )
     loss_list = text_classification_model_trainer.fit(batch_size=1000, num_epoch=2)
-
-    plt.plot(loss_list)
-    plt.show()

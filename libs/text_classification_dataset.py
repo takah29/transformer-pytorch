@@ -107,8 +107,9 @@ if __name__ == "__main__":
         # 事前にbuild_ldcc_word_freqs.pyを実行してデータセットのダウンロードと
         # データセットのpickleファイルと単語辞書の作成を行っておく
         print("text_classification_dataset test")
-        labeled_tokenized_text_pkl_path = Path("../ldcc_tokenized_text_list.pkl").resolve()
-        word_freqs_path = Path("../ldcc_word_freqs.json").resolve()
+        base_path = Path(__file__).resolve().parents[1] / "ldcc_dataset"
+        labeled_tokenized_text_pkl_path = base_path / "ldcc_tokenized_text_list.pkl"
+        word_freqs_path = base_path / "ldcc_word_freqs.json"
 
         text_classification_dataset = TextClassificationDataset.create(
             labeled_tokenized_text_pkl_path, word_freqs_path
