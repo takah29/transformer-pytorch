@@ -6,7 +6,7 @@ import torch
 from libs.text_pair_dataset import get_vocab
 from libs.text_encoder import TextEncoder, create_tokenizer
 from libs.transformer import Transformer
-from libs.transformer_predictor import TransformerPredictor
+from libs.transformer_predictor import TransformerBeamSearchPredictor
 
 
 def create_instance(model_path: Path, enc_word_freqs_path: Path, dec_word_freqs_path: Path, device):
@@ -16,7 +16,9 @@ def create_instance(model_path: Path, enc_word_freqs_path: Path, dec_word_freqs_
     transformer.load_state_dict(torch.load(model_path))
     transformer.to(device)
 
-    predictor = TransformerPredictor(transformer, dec_vocab["<bos>"], dec_vocab["<eos>"])
+    predictor = TransformerBeamSearchPredictor(
+        transformer, dec_vocab["<bos>"], dec_vocab["<eos>"], maxlen=100
+    )
 
     enc_tokenizer = create_tokenizer(lang="en")
     enc_text_encoder = TextEncoder(enc_tokenizer, enc_vocab)
@@ -27,17 +29,12 @@ def create_instance(model_path: Path, enc_word_freqs_path: Path, dec_word_freqs_
     return predictor, enc_text_encoder, dec_text_encoder
 
 
-def translate(text: str, predictor, enc_text_encoder, bos_id, eos_id, dec_text_encoder, device):
+def translate(text: str, predictor, enc_text_encoder, dec_text_encoder, device):
     encoded_text = enc_text_encoder.encode(text)
-    input_text = torch.tensor(
-        [bos_id] + encoded_text + [eos_id],
-        dtype=torch.long,
-    ).to(device)
+    input_text = torch.tensor(encoded_text, dtype=torch.long).to(device)
 
-    input_mask = torch.zeros(input_text.shape, dtype=torch.bool).to(device)
-
-    output = predictor.predict(input_text, input_mask)
-    translated_text = dec_text_encoder.decode(list(output)[1:-1], sep=" ")
+    output = predictor.predict(input_text)
+    translated_text = dec_text_encoder.decode(list(output), sep=" ")
 
     return translated_text
 
@@ -61,17 +58,14 @@ def main():
     predictor, enc_text_encoder, dec_text_encoder = create_instance(
         model_path, enc_word_freqs_path, dec_word_freqs_path, device
     )
-    bos_id = enc_text_encoder.get_bos_id()
-    eos_id = enc_text_encoder.get_eos_id()
 
     while True:
-        print("text: ", end="")
-        text = input().strip()
+        text = input("text: ").strip()
+
         if text == "":
             continue
-        translated_text = translate(
-            text, predictor, enc_text_encoder, bos_id, eos_id, dec_text_encoder, device
-        )
+
+        translated_text = translate(text, predictor, enc_text_encoder, dec_text_encoder, device)
         print(text)
         print(f"   -> {translated_text}")
 
