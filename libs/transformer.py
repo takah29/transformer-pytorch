@@ -307,15 +307,12 @@ if __name__ == "__main__":
     from text_pair_dataset import TextPairDataset
     from torch.utils.data import DataLoader
 
-    # 事前にbuild_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
-    en_txt_file_path = Path(
-        "../small_parallel_enja_dataset/small_parallel_enja-master/dev.en"
-    ).resolve()
-    ja_txt_file_path = Path(
-        "../small_parallel_enja_dataset/small_parallel_enja-master/dev.ja"
-    ).resolve()
-    en_word_freqs_path = Path("../small_parallel_enja_dataset/word_freqs_en.json").resolve()
-    ja_word_freqs_path = Path("../small_parallel_enja_dataset/word_freqs_ja.json").resolve()
+    # 事前にbuild_small_parallel_enja_word_freqs.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
+    base_path = Path(__file__).resolve().parents[1] / "small_parallel_enja_dataset"
+    en_txt_file_path = base_path / "en_train_texts.txt"
+    ja_txt_file_path = base_path / "ja_train_texts.txt"
+    en_word_freqs_path = base_path / "en_word_freqs.json"
+    ja_word_freqs_path = base_path / "ja_word_freqs.json"
 
     text_pair_dataset = TextPairDataset.create(
         en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path

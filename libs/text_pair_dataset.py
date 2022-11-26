@@ -117,10 +117,11 @@ if __name__ == "__main__":
     def test1():
         # 事前にbuild_small_parallel_enja_word_freqs.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
         print("text_pair_dataset test")
-        en_txt_file_path = Path("../multi30k_dataset/enc_tokenized_texts.txt").resolve()
-        ja_txt_file_path = Path("../multi30k_dataset/dec_tokenized_texts.txt").resolve()
-        en_word_freqs_path = Path("../word_freqs_en.json").resolve()
-        ja_word_freqs_path = Path("../word_freqs_ja.json").resolve()
+        base_path = Path(__file__).resolve().parents[1] / "small_parallel_enja_dataset"
+        en_txt_file_path = base_path / "en_train_texts.txt"
+        ja_txt_file_path = base_path / "ja_train_texts.txt"
+        en_word_freqs_path = base_path / "en_word_freqs.json"
+        ja_word_freqs_path = base_path / "ja_word_freqs.json"
 
         text_pair_dataset = TextPairDataset.create(
             en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
