@@ -69,7 +69,15 @@ class TranslationModelTrainer:
 
         _, self._target_vocab_size = train_dataset.get_vocab_size()
 
-        self._criterion = nn.CrossEntropyLoss(ignore_index=self._train_dataset.get_pad_id()[0])
+        # self._criterion = nn.CrossEntropyLoss(
+        #     ignore_index=self._train_dataset.get_pad_id()[0], label_smoothing=0.0
+        # )
+
+        self._train_criterion = TranslationLoss(self._train_dataset.get_pad_id()[0], 0.1)
+        if self._valid_dataset is not None:
+            self._valid_criterion = TranslationLoss(self._valid_dataset.get_pad_id()[0], 0.0)
+        else:
+            self._valid_criterion = None
 
     def fit(self, batch_size: int, num_epoch: int):
         train_loss = valid_loss = None
@@ -126,7 +134,11 @@ class TranslationModelTrainer:
                 enc_input_mask,
                 dec_input_mask,
             )
-            loss = self._criterion(y.reshape(-1, y.shape[-1]), t.reshape(-1))
+            if is_train:
+                loss = self._train_criterion(y, t)
+            else:
+                loss = self._valid_criterion(y, t)
+
             s += loss.item()
 
             if is_train:
@@ -142,8 +154,8 @@ class TranslationModelTrainer:
 
 def get_instance(params):
     transformer = Transformer(**params)
-    # optimizer = optim.Adam(transformer.parameters(), lr=0.0, betas=(0.9, 0.98), eps=10e-9)
-    optimizer = optim.Adam(transformer.parameters())
+    optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1.0e-9)
+    # optimizer = optim.Adam(transformer.parameters())
     lr_scheduler = TransformerLRScheduler(optimizer, params["n_dim"], warmup_steps=4000)
 
     return transformer, optimizer, lr_scheduler
@@ -189,7 +201,7 @@ if __name__ == "__main__":
 
         model, optimizer, scheduler = get_instance(params)
         translation_model_trainer = TranslationModelTrainer(
-            model, optimizer, None, device, train_dataset, valid_dataset
+            model, optimizer, scheduler, device, train_dataset, valid_dataset
         )
         train_loss_list, valid_loss_list = translation_model_trainer.fit(
             batch_size=128, num_epoch=10
