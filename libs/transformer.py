@@ -258,6 +258,15 @@ class Transformer(nn.Module):
     ):
         super().__init__()
 
+        self.enc_vocab_size = enc_vocab_size
+        self.dec_vocab_size = dec_vocab_size
+        self.n_dim = n_dim
+        self.hidden_dim = hidden_dim
+        self.n_enc_blocks = n_enc_blocks
+        self.n_dec_blocks = n_dec_blocks
+        self.head_num = head_num
+        self.dropout_rate = dropout_rate
+
         self.encoder = TransformerEncoder(
             enc_vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num, dropout_rate
         )
@@ -283,12 +292,12 @@ class Transformer(nn.Module):
         params = {
             "enc_vocab_size": enc_vocab_size,
             "dec_vocab_size": dec_vocab_size,
-            "n_dim": 240,
-            "hidden_dim": 100,
+            "n_dim": 128,
+            "hidden_dim": 500,
             "n_enc_blocks": 2,
             "n_dec_blocks": 2,
             "head_num": 8,
-            "dropout_rate": 0.1,
+            "dropout_rate": 0.3,
         }
         return Transformer(**params)
 
