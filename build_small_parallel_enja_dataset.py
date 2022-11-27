@@ -23,8 +23,6 @@ def get_datasets(train_file_path: Path, val_file_path: Path, test_file_path: Pat
     return results
 
 
-
-
 def main():
     # データセットのアドレスと保存ファイル名
     url = "https://github.com/odashi/small_parallel_enja/archive/refs/heads/master.zip"
