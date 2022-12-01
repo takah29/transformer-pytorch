@@ -21,6 +21,25 @@ def get_datasets(train_file_path: Path, val_file_path: Path, lang="en"):
     return results
 
 
+def write_parameter_settings(base_path: Path):
+    settings = {
+        "params": {
+            "n_dim": 128,
+            "hidden_dim": 500,
+            "n_enc_blocks": 2,
+            "n_dec_blocks": 2,
+            "head_num": 8,
+            "dropout_rate": 0.3,
+        },
+        "training": {
+            "batch_size": 128,
+            "num_epoch": 20,
+        },
+    }
+    with (base_path / "settings.json").open("w") as f:
+        json.dump(settings, f, indent=2, ensure_ascii=False)
+
+
 def main():
     # データセットのアドレスと保存ファイル名
     url_base = "https://raw.githubusercontent.com/multi30k/dataset/master/data/task1/raw/"
@@ -61,6 +80,9 @@ def main():
 
     with (base_path / "tgt_word_freqs.json").open("w") as f:
         json.dump(results["word_freqs"], f, indent=2, ensure_ascii=False)
+
+    print("write parameter settings")
+    write_parameter_settings(base_path)
 
     print("done.")
 
