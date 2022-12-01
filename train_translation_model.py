@@ -12,30 +12,29 @@ from libs.translation_model_trainer import TranslationModelTrainer, TransformerL
 def get_instance(enc_vocab_size, dec_vocab_size):
     transformer = Transformer.create(enc_vocab_size, dec_vocab_size)
     optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-9)
-    #optimizer = optim.Adam(transformer.parameters())
+    # optimizer = optim.Adam(transformer.parameters())
     lr_scheduler = TransformerLRScheduler(optimizer, transformer.n_dim, warmup_steps=4000)
 
     return transformer, optimizer, lr_scheduler
 
 
 def main():
-    # 事前にbuild_multi30k_word_freqs.pyを実行してデータセットのダウンロードと頻度辞書の作成を行っておく
     base_path = Path("./small_parallel_enja_dataset").resolve()
 
     # 学習データセット作成
-    de_txt_file_path = base_path / "en_train_texts.txt"
-    en_txt_file_path = base_path / "ja_train_texts.txt"
-    de_word_freqs_path = base_path / "en_word_freqs.json"
-    en_word_freqs_path = base_path / "ja_word_freqs.json"
+    src_txt_file_path = base_path / "src_train_texts.txt"
+    tgt_txt_file_path = base_path / "tgt_train_texts.txt"
+    src_word_freqs_path = base_path / "src_word_freqs.json"
+    tgt_word_freqs_path = base_path / "tgt_word_freqs.json"
     train_dataset = TextPairDataset.create(
-        de_txt_file_path, en_txt_file_path, de_word_freqs_path, en_word_freqs_path
+        src_txt_file_path, tgt_txt_file_path, src_word_freqs_path, tgt_word_freqs_path
     )
 
     # 検証データセット作成
-    de_val_txt_file_path = base_path / "en_val_texts.txt"
-    en_val_txt_file_path = base_path / "ja_val_texts.txt"
+    src_val_txt_file_path = base_path / "src_val_texts.txt"
+    tgt_val_txt_file_path = base_path / "tgt_val_texts.txt"
     valid_dataset = TextPairDataset.create(
-        de_val_txt_file_path, en_val_txt_file_path, de_word_freqs_path, en_word_freqs_path
+        src_val_txt_file_path, tgt_val_txt_file_path, src_word_freqs_path, tgt_word_freqs_path
     )
 
     # ネットワークパラメータ定義
@@ -54,7 +53,7 @@ def main():
     translation_model_trainer = TranslationModelTrainer(
         model, optimizer, lr_scheduler, device, train_dataset, valid_dataset, save_path
     )
-    train_loss_list, valid_loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=20)
+    train_loss_list, valid_loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=2)
 
     # Lossをcsvファイルに保存
     with (save_path / "loss.csv").open("w") as f:
