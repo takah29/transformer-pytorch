@@ -80,6 +80,7 @@ class TranslationModelTrainer:
             self._valid_criterion = None
 
     def fit(self, batch_size: int, num_epoch: int):
+        best_loss = float("inf")
         train_loss = valid_loss = None
 
         train_data_loader = DataLoader(
@@ -106,16 +107,16 @@ class TranslationModelTrainer:
                     valid_loss = self._run_epoch(valid_data_loader, is_train=False)
                 valid_loss_list.append(valid_loss)
 
-            print(f"train loss: {train_loss}, valid loss: {valid_loss}")
+                # valid lossが一番低いモデルを保存する
+                if self._save_path is not None and valid_loss < best_loss:
+                    self._save_model("model.pth")
+                    best_loss = valid_loss
 
+            # 毎エポックごとにモデルを保存する
             if self._save_path:
-                self._save_path.mkdir(exist_ok=True, parents=True)
-                self._model.to("cpu")
-                torch.save(
-                    self._model.state_dict(),
-                    self._save_path / f"snapshot_epoch{i + 1:03}.pth",
-                )
-                self._model.to(self._device)
+                self._save_model(f"snapshot_epoch{i + 1:03}.pth")
+
+            print(f"train loss: {train_loss}, valid loss: {valid_loss}")
 
         return train_loss_list, valid_loss_list
 
@@ -150,6 +151,12 @@ class TranslationModelTrainer:
                     self._lr_scheduler.step()
 
         return s / len(data_loader)
+
+    def _save_model(self, filename):
+        self._save_path.mkdir(exist_ok=True, parents=True)
+        self._model.to("cpu")
+        torch.save(self._model.state_dict(), self._save_path / filename)
+        self._model.to(self._device)
 
 
 def get_instance(params):
@@ -202,6 +209,4 @@ if __name__ == "__main__":
     translation_model_trainer = TranslationModelTrainer(
         model, optimizer, scheduler, device, train_dataset, valid_dataset
     )
-    train_loss_list, valid_loss_list = translation_model_trainer.fit(
-        batch_size=128, num_epoch=1
-    )
+    train_loss_list, valid_loss_list = translation_model_trainer.fit(batch_size=128, num_epoch=1)
