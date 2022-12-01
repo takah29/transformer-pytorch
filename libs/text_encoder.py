@@ -1,12 +1,12 @@
 from pathlib import Path
-from typing import List
+from typing import List, Any
 
 from janome.tokenizer import Tokenizer
 from torchtext.vocab import Vocab
 from torchtext.data.utils import get_tokenizer
 
 
-def create_tokenizer(lang):
+def create_tokenizer(lang: str) -> Any:
     if lang == "en":
         tokenizer = get_tokenizer("spacy", language="en_core_web_sm")
     elif lang == "de":
@@ -21,7 +21,7 @@ def create_tokenizer(lang):
     return tokenizer
 
 
-def get_tokenized_text_list(file_path, lang="en"):
+def get_tokenized_text_list(file_path: Path, lang: str = "en") -> List[List[str]]:
     tokenizer = create_tokenizer(lang)
     tokenized_text_list = []
     with file_path.open("r") as f:
@@ -41,7 +41,7 @@ class JapaneseTokenizer:
     def __init__(self):
         self._tokenizer = Tokenizer()
 
-    def __call__(self, text: str):
+    def __call__(self, text: str) -> List[str]:
         return list(self._tokenizer.tokenize(text, wakati=True))
 
 
@@ -54,17 +54,17 @@ class TextEncoder:
         self._tokenizer = tokenizer
         self._vocab = vocab
 
-    def get_bos_id(self):
+    def get_bos_id(self) -> int:
         return self._vocab["<bos>"]
 
-    def get_eos_id(self):
+    def get_eos_id(self) -> int:
         return self._vocab["<eos>"]
 
-    def encode(self, text: str):
+    def encode(self, text: str) -> List[int]:
         tokenized_text = self._tokenizer(text)
         return self._vocab.lookup_indices(tokenized_text)
 
-    def decode(self, id_list: List[int], sep=""):
+    def decode(self, id_list: List[int], sep="") -> str:
         word_list = self._vocab.lookup_tokens(id_list)
         return sep.join(word_list)
 
