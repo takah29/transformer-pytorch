@@ -40,32 +40,26 @@ def main():
         cmd = ["gzip", "-d", zip_path]
         run(cmd)
 
-    print("create de files...")
+    print("create source files...")
     results = get_datasets(base_path / "train.de", base_path / "val.de", lang="de")
 
-    with (base_path / "de_train_texts.txt").open("w") as f:
-        for tokenized_text in results["train_texts"]:
-            f.write(" ".join(tokenized_text) + "\n")
+    for key in ["train_texts", "val_texts"]:
+        with (base_path / f"src_{key}.txt").open("w") as f:
+            for tokenized_text in results[key]:
+                f.write(" ".join(tokenized_text) + "\n")
 
-    with (base_path / "de_val_texts.txt").open("w") as f:
-        for tokenized_text in results["val_texts"]:
-            f.write(" ".join(tokenized_text) + "\n")
-
-    with (base_path / "de_word_freqs.json").open("w") as f:
+    with (base_path / "src_word_freqs.json").open("w") as f:
         json.dump(results["word_freqs"], f, indent=2, ensure_ascii=False)
 
-    print("create en files...")
+    print("create target files...")
     results = get_datasets(base_path / "train.en", base_path / "val.en", lang="en")
 
-    with (base_path / "en_train_texts.txt").open("w") as f:
-        for tokenized_text in results["train_texts"]:
-            f.write(" ".join(tokenized_text) + "\n")
+    for key in ["train_texts", "val_texts"]:
+        with (base_path / f"tgt_{key}.txt").open("w") as f:
+            for tokenized_text in results[key]:
+                f.write(" ".join(tokenized_text) + "\n")
 
-    with (base_path / "en_val_texts.txt").open("w") as f:
-        for tokenized_text in results["val_texts"]:
-            f.write(" ".join(tokenized_text) + "\n")
-
-    with (base_path / "en_word_freqs.json").open("w") as f:
+    with (base_path / "tgt_word_freqs.json").open("w") as f:
         json.dump(results["word_freqs"], f, indent=2, ensure_ascii=False)
 
     print("done.")
