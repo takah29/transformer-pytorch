@@ -1,10 +1,10 @@
 import torch
-from torch import nn
+from torch import nn, Tensor
 from torch.nn import functional as F
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, n_dim, head_num, dropout_rate=0.1):
+    def __init__(self, n_dim: int, head_num: int, dropout_rate: float = 0.1):
         # 実装の簡易化のため次元をヘッド数で割り切れるかチェックする
         if n_dim % head_num != 0:
             raise ValueError("n_dim % head_num is not 0.")
@@ -23,7 +23,9 @@ class MultiheadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.out_linear = nn.Linear(n_dim, n_dim)
 
-    def forward(self, x1, x2, x2_mask=None, attn_mask=None):
+    def forward(
+        self, x1: Tensor, x2: Tensor, x2_mask: Tensor | None = None, attn_mask: Tensor | None = None
+    ) -> Tensor:
         batch_size, x1_seq_size, _ = x1.size()  # seq_sizeはtoken_sizeと同じ
         _, x2_seq_size, _ = x2.size()
 
@@ -78,7 +80,7 @@ class MultiheadAttention(nn.Module):
         return y
 
     @staticmethod
-    def _subsequent_mask(size):
+    def _subsequent_mask(size: int) -> Tensor:
         attention_shape = (size, size)
         # 三角行列の生成
         subsequent_mask = torch.triu(torch.ones(attention_shape), diagonal=1).to(torch.bool)
@@ -87,14 +89,14 @@ class MultiheadAttention(nn.Module):
 
 
 class FeedForwardNetwork(nn.Module):
-    def __init__(self, n_dim, hidden_dim, dropout_rate=0.1):
+    def __init__(self, n_dim: int, hidden_dim: int, dropout_rate: float = 0.1):
         super().__init__()
 
         self.linear1 = nn.Linear(n_dim, hidden_dim)
         self.linear2 = nn.Linear(hidden_dim, n_dim)
         self.dropout = nn.Dropout(dropout_rate)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         y = torch.relu(self.linear1(x))
         y = self.dropout(y)
         y = self.linear2(y)
@@ -103,17 +105,17 @@ class FeedForwardNetwork(nn.Module):
 
 
 class PositionalEncoder(nn.Module):
-    def __init__(self, n_dim, dropout_rate=0.1, maxlen=1000):
+    def __init__(self, n_dim: int, dropout_rate: float = 0.1, maxlen: int = 1000):
         super().__init__()
 
         self.n_dim = n_dim
         self.maxlen = maxlen
 
         self.dropout = nn.Dropout(dropout_rate)
-        emb_pos = self._calc_pe(maxlen)
+        emb_pos: Tensor = self._calc_pe(maxlen)
         self.register_buffer("embedding_pos", emb_pos)
 
-    def _calc_pe(self, maxlen):
+    def _calc_pe(self, maxlen: int) -> Tensor:
         result = []
         pos_v = torch.arange(maxlen)
 
@@ -126,12 +128,12 @@ class PositionalEncoder(nn.Module):
 
         return torch.vstack(result).transpose(1, 0)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return self.dropout(x + self.embedding_pos[: x.size(1), :])
 
 
 class TransformerEncoderBlock(nn.Module):
-    def __init__(self, n_dim, hidden_dim, head_num, dropout_rate=0.1):
+    def __init__(self, n_dim: int, hidden_dim: int, head_num: int, dropout_rate: float = 0.1):
         super().__init__()
 
         self.attention = MultiheadAttention(n_dim, head_num, dropout_rate)
@@ -141,7 +143,7 @@ class TransformerEncoderBlock(nn.Module):
         self.dropout2 = nn.Dropout(dropout_rate)
         self.norm2 = nn.LayerNorm((n_dim))
 
-    def forward(self, x, x_mask=None):
+    def forward(self, x: Tensor, x_mask: Tensor | None = None) -> Tensor:
         y = x + self.dropout1(self.attention(x, x, x_mask))
         y = self.norm1(y)
         y = y + self.dropout2(self.feedforward(y))
@@ -151,7 +153,15 @@ class TransformerEncoderBlock(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num, dropout_rate=0.1):
+    def __init__(
+        self,
+        vocab_size: int,
+        n_dim: int,
+        hidden_dim: int,
+        n_enc_blocks: int,
+        head_num: int,
+        dropout_rate: float = 0.1,
+    ):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
@@ -162,7 +172,7 @@ class TransformerEncoder(nn.Module):
 
         self.sqrt_embedding_size = n_dim**0.5
 
-    def forward(self, x, src_mask=None):
+    def forward(self, x: Tensor, src_mask: Tensor | None = None) -> Tensor:
         y = self.embedding(x) * self.sqrt_embedding_size
         y = self.positional_encoder(y)
 
@@ -173,7 +183,7 @@ class TransformerEncoder(nn.Module):
 
 
 class TransformerDecoderBlock(nn.Module):
-    def __init__(self, n_dim, hidden_dim, head_num, dropout_rate=0.1):
+    def __init__(self, n_dim: int, hidden_dim: int, head_num: int, dropout_rate: float = 0.1):
         super().__init__()
 
         self.masked_attention = MultiheadAttention(n_dim, head_num, dropout_rate)
@@ -186,7 +196,9 @@ class TransformerDecoderBlock(nn.Module):
         self.dropout3 = nn.Dropout(dropout_rate)
         self.norm3 = nn.LayerNorm((n_dim))
 
-    def forward(self, x, z, x_mask=None, z_mask=None):
+    def forward(
+        self, x: Tensor, z: Tensor, x_mask: Tensor | None = None, z_mask: Tensor | None = None
+    ) -> Tensor:
         attn_mask = MultiheadAttention._subsequent_mask(x.shape[1])
         attn_mask = attn_mask.to(x.device)
         y = x + self.dropout1(self.masked_attention(x, x, x2_mask=x_mask, attn_mask=attn_mask))
@@ -200,7 +212,15 @@ class TransformerDecoderBlock(nn.Module):
 
 
 class TransformerDecoder(nn.Module):
-    def __init__(self, vocab_size, n_dim, hidden_dim, n_dec_blocks, head_num, dropout_rate=0.1):
+    def __init__(
+        self,
+        vocab_size: int,
+        n_dim: int,
+        hidden_dim: int,
+        n_dec_blocks: int,
+        head_num: int,
+        dropout_rate: float = 0.1,
+    ):
         super().__init__()
 
         self.embedding = nn.Embedding(vocab_size, n_dim)
@@ -212,7 +232,9 @@ class TransformerDecoder(nn.Module):
 
         self.sqrt_embedding_size = n_dim**0.5
 
-    def forward(self, x, z, x_mask=None, z_mask=None):
+    def forward(
+        self, x: Tensor, z: Tensor, x_mask: Tensor | None = None, z_mask: Tensor | None = None
+    ) -> Tensor:
         y = self.embedding(x) * self.sqrt_embedding_size
         y = self.pe(y)
 
@@ -227,7 +249,14 @@ class TransformerClassifier(nn.Module):
     """TransformerEncoderを使用した分類用ネットワーク"""
 
     def __init__(
-        self, n_classes, vocab_size, n_dim, hidden_dim, n_enc_blocks, head_num, dropout_rate=0.1
+        self,
+        n_classes: int,
+        vocab_size: int,
+        n_dim: int,
+        hidden_dim: int,
+        n_enc_blocks: int,
+        head_num: int,
+        dropout_rate: float = 0.1,
     ):
         super().__init__()
 
@@ -236,7 +265,7 @@ class TransformerClassifier(nn.Module):
         )
         self.linear = nn.Linear(n_dim, n_classes)
 
-    def forward(self, x, mask=None):
+    def forward(self, x: Tensor, mask: Tensor | None = None) -> Tensor:
         y = self.encoder(x, mask)
         y = torch.mean(y, dim=1)
         y = self.linear(y)
@@ -247,14 +276,14 @@ class TransformerClassifier(nn.Module):
 class Transformer(nn.Module):
     def __init__(
         self,
-        enc_vocab_size,
-        dec_vocab_size,
-        n_dim,
-        hidden_dim,
-        n_enc_blocks,
-        n_dec_blocks,
-        head_num,
-        dropout_rate=0.1,
+        enc_vocab_size: int,
+        dec_vocab_size: int,
+        n_dim: int,
+        hidden_dim: int,
+        n_enc_blocks: int,
+        n_dec_blocks: int,
+        head_num: int,
+        dropout_rate: float = 0.1,
     ):
         super().__init__()
 
@@ -281,14 +310,14 @@ class Transformer(nn.Module):
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
 
-    def forward(self, enc_x, dec_x, enc_mask, dec_mask):
+    def forward(self, enc_x: Tensor, dec_x: Tensor, enc_mask: Tensor, dec_mask: Tensor):
         enc_y = self.encoder(enc_x, enc_mask)
         y = self.decoder(dec_x, enc_y, dec_mask, enc_mask)
 
         return y
 
     @staticmethod
-    def create(enc_vocab_size, dec_vocab_size):
+    def create(enc_vocab_size: int, dec_vocab_size: int):
         params = {
             "enc_vocab_size": enc_vocab_size,
             "dec_vocab_size": dec_vocab_size,
