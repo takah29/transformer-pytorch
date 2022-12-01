@@ -1,14 +1,15 @@
 from pathlib import Path
 import json
 from collections import OrderedDict
+from typing import List, Tuple
 
 import torch
 from torch.utils.data import Dataset
 import torchtext.transforms as T
-from torchtext.vocab import vocab
+from torchtext.vocab import vocab, Vocab
 
 
-def get_vocab(word_freqs_file_path):
+def get_vocab(word_freqs_file_path: Path):
     with open(word_freqs_file_path, "r") as f:
         word_freqs_dict = json.load(f, object_pairs_hook=OrderedDict)
 
@@ -19,7 +20,14 @@ def get_vocab(word_freqs_file_path):
 
 
 class TextPairDataset(Dataset):
-    def __init__(self, tokenized_text_list_1, tokenized_text_list_2, vocab_1, vocab_2, word_count):
+    def __init__(
+        self,
+        tokenized_text_list_1: List[List[str]],
+        tokenized_text_list_2: List[List[str]],
+        vocab_1: Vocab,
+        vocab_2: Vocab,
+        word_count: int,
+    ):
         super().__init__()
 
         self._tokenized_text_list_1 = tokenized_text_list_1
@@ -39,7 +47,7 @@ class TextPairDataset(Dataset):
         self._pad_word_id_1 = vocab_1["<pad>"]
         self._pad_word_id_2 = vocab_2["<pad>"]
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: int):
         enc_input = self._tokenized_text_list_1[i]
         enc_input = self._text_transform_1([enc_input]).squeeze()
 
@@ -63,21 +71,21 @@ class TextPairDataset(Dataset):
 
         return data
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._n_data
 
-    def get_vocab_size(self):
+    def get_vocab_size(self) -> Tuple[int, int]:
         return len(self._vocab_1), len(self._vocab_2)
 
-    def get_pad_id(self):
+    def get_pad_id(self) -> Tuple[int, int]:
         return self._pad_word_id_1, self._pad_word_id_2
 
     @staticmethod
-    def _get_padding_mask(x, pad_id):
+    def _get_padding_mask(x: torch.Tensor, pad_id: int) -> torch.Tensor:
         return (x == pad_id).to(torch.bool)  # (token_size, )
 
     @staticmethod
-    def _get_transform(word_count, vocab_data):
+    def _get_transform(word_count: int, vocab_data: Vocab) -> T.Sequential:
         text_transform = T.Sequential(
             T.VocabTransform(vocab_data),  # トークンに変換
             T.Truncate(word_count - 2),  # word_count - 2 を超過したデータを切り捨てる
@@ -90,7 +98,12 @@ class TextPairDataset(Dataset):
         return text_transform
 
     @staticmethod
-    def create(txt_file_path_1, txt_file_path_2, word_freqs_path_1, word_freqs_path_2):
+    def create(
+        txt_file_path_1: Path,
+        txt_file_path_2: Path,
+        word_freqs_path_1: Path,
+        word_freqs_path_2: Path,
+    ) -> "TextPairDataset":
         # 文章をトークン化してリスト化したデータを作成
         tokenized_text_list_1 = []
         with txt_file_path_1.open("r") as f:
@@ -118,10 +131,10 @@ if __name__ == "__main__":
         # 事前にbuild_small_parallel_enja_word_freqs.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
         print("text_pair_dataset test")
         base_path = Path(__file__).resolve().parents[1] / "small_parallel_enja_dataset"
-        en_txt_file_path = base_path / "en_train_texts.txt"
-        ja_txt_file_path = base_path / "ja_train_texts.txt"
-        en_word_freqs_path = base_path / "en_word_freqs.json"
-        ja_word_freqs_path = base_path / "ja_word_freqs.json"
+        en_txt_file_path = base_path / "src_train_texts.txt"
+        ja_txt_file_path = base_path / "tgt_train_texts.txt"
+        en_word_freqs_path = base_path / "src_word_freqs.json"
+        ja_word_freqs_path = base_path / "tgt_word_freqs.json"
 
         text_pair_dataset = TextPairDataset.create(
             en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
