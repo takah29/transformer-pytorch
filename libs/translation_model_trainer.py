@@ -69,10 +69,6 @@ class TranslationModelTrainer:
 
         _, self._target_vocab_size = train_dataset.get_vocab_size()
 
-        # self._criterion = nn.CrossEntropyLoss(
-        #     ignore_index=self._train_dataset.get_pad_id()[0], label_smoothing=0.0
-        # )
-
         self._train_criterion = TranslationLoss(self._train_dataset.get_pad_id()[0], 0.1)
         if self._valid_dataset is not None:
             self._valid_criterion = TranslationLoss(self._valid_dataset.get_pad_id()[0], 0.0)
@@ -162,21 +158,15 @@ class TranslationModelTrainer:
 def get_instance(params):
     transformer = Transformer(**params)
     optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1.0e-9)
-    # optimizer = optim.Adam(transformer.parameters())
     lr_scheduler = TransformerLRScheduler(optimizer, params["n_dim"], warmup_steps=4000)
 
     return transformer, optimizer, lr_scheduler
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-
-    import matplotlib.pyplot as plt
-
     from text_pair_dataset import TextPairDataset
     from transformer import Transformer
 
-    # 事前にbuild_small_parallel_enja_word_freqs.pyを実行してデータセットのダウンロードと単語辞書の作成を行っておく
     base_path = Path(__file__).resolve().parents[1] / "small_parallel_enja_dataset"
     en_txt_file_path = base_path / "en_train_texts.txt"
     ja_txt_file_path = base_path / "ja_train_texts.txt"
