@@ -55,8 +55,10 @@ def translate(text: str, predictor, enc_text_encoder, dec_text_encoder, device):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Learning the model.")
-    parser.add_argument("dataset_dir", help="Dataset root directory path", type=str)
+    parser = argparse.ArgumentParser(description="Translate with pre-trained odel..")
+    parser.add_argument(
+        "dataset_dir", help="Dataset root directory with pre-trained model.", type=str
+    )
 
     args = parser.parse_args()
 
