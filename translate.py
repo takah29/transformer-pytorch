@@ -1,5 +1,5 @@
-import sys
 from pathlib import Path
+import json
 
 import torch
 
@@ -9,24 +9,36 @@ from libs.transformer import Transformer
 from libs.transformer_predictor import TransformerBeamSearchPredictor
 
 
-def create_instance(model_path: Path, enc_word_freqs_path: Path, dec_word_freqs_path: Path, device):
-    enc_vocab = get_vocab(enc_word_freqs_path)
-    dec_vocab = get_vocab(dec_word_freqs_path)
-    transformer = Transformer.create(len(enc_vocab), len(dec_vocab))
+def create_instance(
+    params: dict,
+    model_path: Path,
+    src_word_freqs_path: Path,
+    tgt_word_freqs_path: Path,
+    src_min_freq: int,
+    tgt_min_freq: int,
+    device,
+):
+    src_vocab = get_vocab(src_word_freqs_path, src_min_freq)
+    tgt_vocab = get_vocab(tgt_word_freqs_path, tgt_min_freq)
+
+    params["enc_vocab_size"] = len(src_vocab)
+    params["dec_vocab_size"] = len(tgt_vocab)
+
+    transformer = Transformer(**params)
     transformer.load_state_dict(torch.load(model_path))
     transformer.to(device)
 
     predictor = TransformerBeamSearchPredictor(
-        transformer, dec_vocab["<bos>"], dec_vocab["<eos>"], maxlen=100
+        transformer, tgt_vocab["<bos>"], tgt_vocab["<eos>"], maxlen=100
     )
 
-    enc_tokenizer = create_tokenizer(lang="en")
-    enc_text_encoder = TextEncoder(enc_tokenizer, enc_vocab)
+    src_tokenizer = create_tokenizer(lang="en")
+    src_text_encoder = TextEncoder(src_tokenizer, src_vocab)
 
-    dec_tokenizer = create_tokenizer(lang="ja")
-    dec_text_encoder = TextEncoder(dec_tokenizer, dec_vocab)
+    src_tokenizer = create_tokenizer(lang="ja")
+    tgt_text_encoder = TextEncoder(src_tokenizer, tgt_vocab)
 
-    return predictor, enc_text_encoder, dec_text_encoder
+    return predictor, src_text_encoder, tgt_text_encoder
 
 
 def translate(text: str, predictor, enc_text_encoder, dec_text_encoder, device):
@@ -34,29 +46,52 @@ def translate(text: str, predictor, enc_text_encoder, dec_text_encoder, device):
     input_text = torch.tensor(encoded_text, dtype=torch.long).to(device)
 
     output = predictor.predict(input_text)
+
     translated_text = dec_text_encoder.decode(list(output), sep=" ")
 
     return translated_text
 
 
 def main():
-    base_path = Path(__file__).resolve().parent
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Learning the model.")
+    parser.add_argument("dataset_dir", help="Dataset root directory path", type=str)
+
+    args = parser.parse_args()
+
+    base_path = Path(args.dataset_dir).resolve()
 
     # モデルファイルパス
     model_dir_path = base_path / "models"
+
     if (model_dir_path / "model.pth").exists():
         model_path = model_dir_path / "model.pth"
     else:
         model_path = model_dir_path.glob("*.pth")[-1]
 
     # 単語頻度ファイルのパス
-    word_freqs_dir = base_path / "./small_parallel_enja_dataset"
-    enc_word_freqs_path = word_freqs_dir / "en_word_freqs.json"
-    dec_word_freqs_path = word_freqs_dir / "ja_word_freqs.json"
+    src_word_freqs_path = base_path / "src_word_freqs.json"
+    tgt_word_freqs_path = base_path / "tgt_word_freqs.json"
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    predictor, enc_text_encoder, dec_text_encoder = create_instance(
-        model_path, enc_word_freqs_path, dec_word_freqs_path, device
+
+    # パラメータ設定の読み込み
+    with (base_path / "settings.json").open("r") as f:
+        settings = json.load(f)
+
+    params = settings["params"]
+    src_min_freq = settings["min_freq"]["source"]
+    tgt_min_freq = settings["min_freq"]["target"]
+
+    predictor, src_text_encoder, tgt_text_encoder = create_instance(
+        params,
+        model_path,
+        src_word_freqs_path,
+        tgt_word_freqs_path,
+        src_min_freq,
+        tgt_min_freq,
+        device,
     )
 
     while True:
@@ -65,7 +100,7 @@ def main():
         if text == "":
             continue
 
-        translated_text = translate(text, predictor, enc_text_encoder, dec_text_encoder, device)
+        translated_text = translate(text, predictor, src_text_encoder, tgt_text_encoder, device)
         print(text)
         print(f"   -> {translated_text}")
 
