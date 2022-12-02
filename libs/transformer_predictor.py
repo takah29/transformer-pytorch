@@ -124,26 +124,26 @@ class TransformerBeamSearchPredictor:
             # 選択したk要素の単語ID
             token_indices = torch.remainder(indices, vocab_size)
 
-            next_decoder_input_list = []
+            next_dec_x_list = []
             for beam_index, token_index in zip(beam_indices, token_indices):
                 # i = 0: (1, i + 1) -> (i + 1, )
                 # i > 0: (k, i + 1) -> (i + 1, )
-                prev_decoder_input = dec_x[beam_index]
+                prev_dec_x = dec_x[beam_index]
 
                 # 前回のデコーダーの入力の最後が<eos>の場合、それ以降の出力をすべて<eos>に置き換える
-                if prev_decoder_input[-1] == self._eos_id:
+                if prev_dec_x[-1] == self._eos_id:
                     token_index = self._eos_id
 
                 # -> (1, )
-                token_index = torch.LongTensor([token_index]).to(enc_x)
+                token_index = torch.LongTensor([token_index]).to(enc_x.device)
 
                 # (i + 1, ), (1, ) -> (i + 2, )
-                next_decoder_input = torch.cat([prev_decoder_input, token_index])
+                next_dec_x = torch.cat([prev_dec_x, token_index])
 
-                next_decoder_input_list.append(next_decoder_input)
+                next_dec_x_list.append(next_dec_x)
 
             # -> (k, i + 2)
-            dec_x = torch.vstack(next_decoder_input_list)
+            dec_x = torch.vstack(next_dec_x_list)
 
             # k個すべての入力の最後が<eos>の場合、探索を終了する
             if (dec_x[:, -1] == self._eos_id).sum() == self._k:
