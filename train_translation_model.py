@@ -33,28 +33,41 @@ def main():
         print("Target directory does not exist.")
         return
 
+    # パラメータ設定の読み込みと設定
+    with (base_path / "settings.json").open("r") as f:
+        settings = json.load(f)
+
     # 学習データセット作成
     src_txt_file_path = base_path / "src_train_texts.txt"
     tgt_txt_file_path = base_path / "tgt_train_texts.txt"
     src_word_freqs_path = base_path / "src_word_freqs.json"
     tgt_word_freqs_path = base_path / "tgt_word_freqs.json"
+    src_min_freq = settings["min_freq"]["source"]
+    tgt_min_freq = settings["min_freq"]["target"]
+
     train_dataset = TextPairDataset.create(
-        src_txt_file_path, tgt_txt_file_path, src_word_freqs_path, tgt_word_freqs_path
+        src_txt_file_path,
+        tgt_txt_file_path,
+        src_word_freqs_path,
+        tgt_word_freqs_path,
+        src_min_freq,
+        tgt_min_freq,
     )
 
     # 検証データセット作成
     src_val_txt_file_path = base_path / "src_val_texts.txt"
     tgt_val_txt_file_path = base_path / "tgt_val_texts.txt"
     valid_dataset = TextPairDataset.create(
-        src_val_txt_file_path, tgt_val_txt_file_path, src_word_freqs_path, tgt_word_freqs_path
+        src_val_txt_file_path,
+        tgt_val_txt_file_path,
+        src_word_freqs_path,
+        tgt_word_freqs_path,
+        src_min_freq,
+        tgt_min_freq,
     )
 
     # GPUが使える場合は使う
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
-
-    # パラメータ設定の読み込みと設定
-    with (base_path / "settings.json").open("r") as f:
-        settings = json.load(f)
 
     enc_vocab_size, dec_vocab_size = train_dataset.get_vocab_size()
     settings["params"]["enc_vocab_size"] = enc_vocab_size
