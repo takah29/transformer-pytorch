@@ -33,7 +33,7 @@ def main():
         print("Target directory does not exist.")
         return
 
-    # パラメータ設定の読み込みと設定
+    # パラメータ設定の読み込み
     with (base_path / "settings.json").open("r") as f:
         settings = json.load(f)
 
