@@ -35,6 +35,10 @@ def write_parameter_settings(base_path: Path):
             "batch_size": 128,
             "num_epoch": 20,
         },
+        "min_freq": {
+            "source": 1,
+            "target": 1,
+        },
     }
     with (base_path / "settings.json").open("w") as f:
         json.dump(settings, f, indent=2, ensure_ascii=False)
