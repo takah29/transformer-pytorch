@@ -9,11 +9,11 @@ import torchtext.transforms as T
 from torchtext.vocab import vocab, Vocab
 
 
-def get_vocab(word_freqs_file_path: Path):
+def get_vocab(word_freqs_file_path: Path, min_freq: int):
     with open(word_freqs_file_path, "r") as f:
         word_freqs_dict = json.load(f, object_pairs_hook=OrderedDict)
 
-    voc = vocab(word_freqs_dict, specials=(["<pad>", "<unk>", "<bos>", "<eos>"]))
+    voc = vocab(word_freqs_dict, min_freq, specials=(["<pad>", "<unk>", "<bos>", "<eos>"]))
     voc.set_default_index(voc["<unk>"])
 
     return voc
@@ -103,6 +103,8 @@ class TextPairDataset(Dataset):
         txt_file_path_2: Path,
         word_freqs_path_1: Path,
         word_freqs_path_2: Path,
+        min_freq_1: int = 1,
+        min_freq_2: int = 1,
     ) -> "TextPairDataset":
         # 文章をトークン化してリスト化したデータを作成
         tokenized_text_list_1 = []
@@ -117,8 +119,8 @@ class TextPairDataset(Dataset):
         # 1文あたりの単語数
         word_count = 40
 
-        vocab_1 = get_vocab(word_freqs_path_1)
-        vocab_2 = get_vocab(word_freqs_path_2)
+        vocab_1 = get_vocab(word_freqs_path_1, min_freq_1)
+        vocab_2 = get_vocab(word_freqs_path_2, min_freq_2)
 
         return TextPairDataset(
             tokenized_text_list_1, tokenized_text_list_2, vocab_1, vocab_2, word_count
