@@ -9,7 +9,7 @@ import torchtext.transforms as T
 from torchtext.vocab import vocab, Vocab
 
 
-def get_vocab(word_freqs_file_path: Path, min_freq: int):
+def get_vocab(word_freqs_file_path: Path, min_freq: int = 1):
     with open(word_freqs_file_path, "r") as f:
         word_freqs_dict = json.load(f, object_pairs_hook=OrderedDict)
 
