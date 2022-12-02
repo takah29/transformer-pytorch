@@ -52,20 +52,20 @@ def get_datasets(train_file_path: Path, dev_file_path: Path, test_file_path: Pat
 def write_parameter_settings(base_path: Path):
     settings = {
         "params": {
-            "n_dim": 128,
-            "hidden_dim": 500,
+            "n_dim": 256,
+            "hidden_dim": 256,
             "n_enc_blocks": 4,
             "n_dec_blocks": 4,
             "head_num": 8,
             "dropout_rate": 0.3,
         },
         "training": {
-            "batch_size": 128,
-            "num_epoch": 20,
+            "batch_size": 100,
+            "num_epoch": 15,
         },
         "min_freq": {
-            "source": 3,
-            "target": 3,
+            "source": 4,
+            "target": 4,
         },
     }
     with (base_path / "settings.json").open("w") as f:
