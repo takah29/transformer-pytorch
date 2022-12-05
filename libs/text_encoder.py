@@ -1,4 +1,5 @@
 from pathlib import Path
+from unicodedata import normalize
 from typing import List, Any
 
 from janome.tokenizer import Tokenizer
@@ -27,6 +28,7 @@ def get_tokenized_text_list(file_path: Path, lang: str = "en") -> List[List[str]
     with file_path.open("r") as f:
         for line in f:
             line = line.strip()
+            line = normalize("NFKC", line.lower())
             tokenized_text_list.append(tokenizer(line))
 
     return tokenized_text_list
