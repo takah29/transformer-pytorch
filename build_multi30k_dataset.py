@@ -54,13 +54,13 @@ def main():
     for file_name in file_names:
         # ダウンロード
         url = url_base + file_name
-        zip_path = base_path / file_name
+        archive_path = base_path / file_name
         print(f"download {file_name}")
-        urlretrieve(url, zip_path)
+        urlretrieve(url, archive_path)
 
         # zipファイルを展開する
         print(f"expand {file_name}")
-        cmd = ["gzip", "-d", zip_path]
+        cmd = ["gzip", "-d", archive_path]
         run(cmd)
 
     print("create source files...")
