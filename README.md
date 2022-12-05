@@ -60,3 +60,42 @@ python translate.py multi30k_dataset < multi30k_dataset/src_val_texts.txt
 #    -> A smiling woman with a briefcase holding a mountain bag .
 # ...
 ```
+
+### Translation from English to Japanese
+
+```bash
+# Activate virtual environment
+pipenv shell
+
+# Download kftt dataset. then create dataset, word frequency files and a parameter setting file.
+python build_kftt_dadaset.py
+
+# Training model on kftt dataset and save the model in the models directory
+python train_translation_model.py kftt_dataset
+
+# Input sample source texts with a redirection
+python translate.py kftt_dataset < kftt_dataset/src_test_texts.txt
+
+# output
+# text: dogen was a zen monk in the early kamakura period .
+#    -> 道元 ( <unk> ) は 鎌倉 時代 初期 の 禅僧 。
+# text: the founder of soto zen
+#    -> 曹洞 禅宗 の 祖 。
+# text: later in his life he also went by the name kigen .
+#    -> 晩年 は 名 の 由来 と し て も 知 ら れ た 。
+# text: within the sect he is referred to by the honorary title koso .
+#    -> 宗派 内 で は 名誉 教授 と 称 さ れ る 。
+# text: posthumously named bussho dento kokushi , or joyo-daishi .
+#    -> 死後 、 正一 位 、 城陽 菩薩 、 城陽 、 城陽 - - - 弘法 大師 。
+# text: he is generally called dogen zenji .
+#    -> 一般 に 道元 と 呼 ば れ る 。
+# text: he is reputed to have been the one that spread the practices of tooth brushing , face washing , table manners and cleaning in japan .
+#    -> 日本 に お い て
+# text: another story has it that he was the first one to bring moso-chiku ( moso bamboo ) to japan .
+#    -> また 、 一 つ の <unk> を <unk> し た と い う 。
+# text: though some points are unclear about dogen 's birth , all accounts agree that he was born in the line of udaijin ( minister of the right ) michichika tsuchimikado ( minamoto no michichika or michichika koga ) .
+#    -> 道元 の 生年 に つ い て は 不明 で あ る 。
+# text: although it is generally accepted that he was born in shoden sanso in kohata , kyoto , to michichika and fujiwara no ishi , the daughter of daijo-daijin ( grand minister of state ) motofusa matsudono ( fujiwara no motofusa ) , recent research suggests that he may have been the son of michitomo horikawa , who was presumed to be his adoptive father .
+#    -> 一般 的 に は 京都 所司 代 で あ っ た が 、 松殿 基房 の 娘 で あ る 。
+# ...
+```
