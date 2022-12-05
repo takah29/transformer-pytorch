@@ -59,7 +59,7 @@ class TransformerBeamSearchPredictor:
         eos_id: int,
         maxlen: int = 100,
         beam_size: int = 100,
-        alpha: float = 1.6,
+        alpha: float = 0.6,
     ):
         self._transformer = transformer
         self._bos_id = bos_id
