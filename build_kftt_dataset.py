@@ -26,12 +26,12 @@ def get_datasets(train_file_path: Path, val_file_path: Path, test_file_path: Pat
 def write_parameter_settings(base_path: Path):
     settings = {
         "params": {
-            "n_dim": 256,
+            "n_dim": 128,
             "hidden_dim": 256,
             "n_enc_blocks": 2,
             "n_dec_blocks": 2,
             "head_num": 8,
-            "dropout_rate": 0.3,
+            "dropout_rate": 0.1,
         },
         "training": {
             "batch_size": 128,
