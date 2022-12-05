@@ -67,7 +67,7 @@ def main():
 
     print("create source files...")
     results = get_datasets(
-        dataset_path / "train.en", dataset_path / "dev.en", dataset_path / "test.en", lang="en"
+        dataset_path / "train.en", dataset_path / "dev.en", dataset_path / "test.en", lang="spaced"
     )
 
     for key in ["train_texts", "val_texts", "test_texts"]:

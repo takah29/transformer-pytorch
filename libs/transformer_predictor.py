@@ -70,7 +70,10 @@ class TransformerBeamSearchPredictor:
 
     @torch.inference_mode()
     def predict(self, enc_x: torch.Tensor) -> torch.Tensor:
-        """Beam Search Decoding"""
+        """Beam Search Decoding
+
+        * Reference: https://kikaben.com/transformers-evaluation-details/
+        """
 
         self._transformer.eval()
 
