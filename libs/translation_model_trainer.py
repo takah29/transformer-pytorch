@@ -167,17 +167,17 @@ if __name__ == "__main__":
     from text_pair_dataset import TextPairDataset
     from transformer import Transformer
 
-    base_path = Path(__file__).resolve().parents[1] / "small_parallel_enja_dataset"
-    en_txt_file_path = base_path / "en_train_texts.txt"
-    ja_txt_file_path = base_path / "ja_train_texts.txt"
-    en_word_freqs_path = base_path / "en_word_freqs.json"
-    ja_word_freqs_path = base_path / "ja_word_freqs.json"
+    base_path = Path(__file__).resolve().parents[1] / "multi30k_dataset"
+    en_txt_file_path = base_path / "src_train_texts.txt"
+    ja_txt_file_path = base_path / "tgt_train_texts.txt"
+    en_word_freqs_path = base_path / "src_word_freqs.json"
+    ja_word_freqs_path = base_path / "tgt_word_freqs.json"
     train_dataset = TextPairDataset.create(
         en_txt_file_path, ja_txt_file_path, en_word_freqs_path, ja_word_freqs_path
     )
 
-    en_val_txt_file_path = base_path / "en_val_texts.txt"
-    ja_val_txt_file_path = base_path / "ja_val_texts.txt"
+    en_val_txt_file_path = base_path / "src_val_texts.txt"
+    ja_val_txt_file_path = base_path / "tgt_val_texts.txt"
     valid_dataset = TextPairDataset.create(
         en_val_txt_file_path, ja_val_txt_file_path, en_word_freqs_path, ja_word_freqs_path
     )
