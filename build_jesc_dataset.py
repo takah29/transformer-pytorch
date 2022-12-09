@@ -1,11 +1,12 @@
+import itertools
+import json
+from collections import Counter, OrderedDict
 from pathlib import Path
 from shutil import unpack_archive
 from urllib.request import urlretrieve
-from collections import Counter, OrderedDict
-import json
-import itertools
 
 from tqdm import tqdm
+
 from libs.text_encoder import create_tokenizer
 
 

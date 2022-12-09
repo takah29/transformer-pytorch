@@ -1,9 +1,9 @@
+import itertools
+import json
+from collections import Counter, OrderedDict
 from pathlib import Path
 from shutil import unpack_archive
 from urllib.request import urlretrieve
-from collections import Counter, OrderedDict
-import json
-import itertools
 
 from libs.text_encoder import get_tokenized_text_list
 

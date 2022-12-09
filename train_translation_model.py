@@ -1,13 +1,13 @@
-from pathlib import Path
 import csv
 import json
+from pathlib import Path
 
 import torch
 from torch import optim
 
 from libs.text_pair_dataset import TextPairDataset
 from libs.transformer import Transformer
-from libs.translation_model_trainer import TranslationModelTrainer, TransformerLRScheduler
+from libs.translation_model_trainer import TransformerLRScheduler, TranslationModelTrainer
 
 
 def get_instance(params: dict):

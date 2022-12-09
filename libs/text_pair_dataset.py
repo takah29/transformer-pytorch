@@ -1,12 +1,12 @@
-from pathlib import Path
 import json
 from collections import OrderedDict
+from pathlib import Path
 from typing import List, Tuple
 
 import torch
-from torch.utils.data import Dataset
 import torchtext.transforms as T
-from torchtext.vocab import vocab, Vocab
+from torch.utils.data import Dataset
+from torchtext.vocab import Vocab, vocab
 
 
 def get_vocab(word_freqs_file_path: Path, min_freq: int = 1):

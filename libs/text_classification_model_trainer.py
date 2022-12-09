@@ -1,6 +1,6 @@
 import torch
-from torch.utils.data import DataLoader
 from torch import nn, optim
+from torch.utils.data import DataLoader
 
 
 class TextClassificationModelTrainer:
@@ -45,8 +45,6 @@ class TextClassificationModelTrainer:
 
 if __name__ == "__main__":
     from pathlib import Path
-
-    import matplotlib.pyplot as plt
 
     from text_classification_dataset import TextClassificationDataset
     from transformer import TransformerClassifier

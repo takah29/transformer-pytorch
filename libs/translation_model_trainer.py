@@ -1,10 +1,10 @@
 from pathlib import Path
-from tqdm import tqdm
+
 import torch
-from torch.utils.data import DataLoader
 from torch import nn, optim
-import torch.nn.functional as F
 from torch.optim.lr_scheduler import _LRScheduler
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 
 class TranslationLoss(nn.Module):

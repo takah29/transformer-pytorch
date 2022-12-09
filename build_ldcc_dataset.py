@@ -1,10 +1,10 @@
+import itertools
+import json
+import pickle
+from collections import Counter, OrderedDict
 from pathlib import Path
 from shutil import unpack_archive
 from urllib.request import urlretrieve
-from collections import Counter, OrderedDict
-import json
-import itertools
-import pickle
 
 from libs.text_encoder import create_tokenizer
 

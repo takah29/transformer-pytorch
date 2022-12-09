@@ -1,11 +1,11 @@
-from pathlib import Path
 import json
-from collections import OrderedDict
 import pickle
+from collections import OrderedDict
+from pathlib import Path
 
 import torch
-from torch.utils.data import Dataset
 import torchtext.transforms as T
+from torch.utils.data import Dataset
 from torchtext.vocab import vocab
 
 

@@ -1,10 +1,10 @@
 from pathlib import Path
+from typing import Any, List
 from unicodedata import normalize
-from typing import List, Any
 
 from janome.tokenizer import Tokenizer
-from torchtext.vocab import Vocab
 from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import Vocab
 
 
 def create_tokenizer(lang: str) -> Any:

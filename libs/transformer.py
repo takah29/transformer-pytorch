@@ -1,5 +1,5 @@
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
 from torch.nn import functional as F
 
 
@@ -333,8 +333,10 @@ class Transformer(nn.Module):
 
 if __name__ == "__main__":
     from pathlib import Path
-    from text_pair_dataset import TextPairDataset
+
     from torch.utils.data import DataLoader
+
+    from text_pair_dataset import TextPairDataset
 
     base_path = Path(__file__).resolve().parents[1] / "multi30k_dataset"
     en_txt_file_path = base_path / "src_train_texts.txt"

@@ -1,10 +1,10 @@
-from pathlib import Path
 import json
+from pathlib import Path
 
 import torch
 
-from libs.text_pair_dataset import get_vocab
 from libs.text_encoder import TextEncoder, create_tokenizer
+from libs.text_pair_dataset import get_vocab
 from libs.transformer import Transformer
 from libs.transformer_predictor import TransformerBeamSearchPredictor
 

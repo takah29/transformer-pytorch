@@ -1,8 +1,7 @@
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
-
 from torch import nn, optim
+from torch.utils.data import DataLoader
 from transformer import TransformerClassifier
 from transformers import AutoTokenizer
 
