@@ -118,7 +118,8 @@ class TranslationModelTrainer:
 
     def _run_epoch(self, data_loader, is_train: bool):
         s = 0.0
-        for batch in tqdm(data_loader):
+        pbar = tqdm(data_loader)
+        for batch in pbar:
             enc_input_text = batch["enc_input"]["text"].to(self._device)
             dec_input_text = batch["dec_input"]["text"].to(self._device)
             enc_input_mask = batch["enc_input"]["mask"].to(self._device)
@@ -145,6 +146,8 @@ class TranslationModelTrainer:
 
                 if self._lr_scheduler is not None:
                     self._lr_scheduler.step()
+
+            pbar.set_description(f"loss/iter: {loss.item():5.3f}, progress")
 
         return s / len(data_loader)
 
