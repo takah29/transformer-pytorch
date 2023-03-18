@@ -32,7 +32,7 @@ python -m spacy download en_core_web_sm
 pipenv shell
 
 # Download Multi30k dataset. then create dataset, word frequency files and a parameter setting file.
-python build_multi30k_dadaset.py
+python build_multi30k_dataset.py
 
 # Training model on Multi30k dataset and save the model in the models directory
 python train_translation_model.py multi30k_dataset
@@ -71,7 +71,7 @@ python translate.py multi30k_dataset < multi30k_dataset/src_val_texts.txt
 pipenv shell
 
 # Download kftt dataset. then create dataset, word frequency files and a parameter setting file.
-python build_kftt_dadaset.py
+python build_kftt_dataset.py
 
 # Training model on kftt dataset and save the model in the models directory
 python train_translation_model.py kftt_dataset
